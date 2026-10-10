@@ -1,0 +1,290 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  extensions = [postgis]
+}
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+enum Role {
+  SEEKER
+  PROVIDER
+  ADMIN
+}
+
+enum ProviderType {
+  INDIVIDUAL
+  PARKING_OPERATOR
+  RESTAURANT
+  HOTEL
+  MALL
+  OFFICE
+  HOSPITAL
+  EDUCATIONAL_INSTITUTION
+  COMMERCIAL_PROPERTY
+  HOUSING_SOCIETY
+  OTHER
+}
+
+enum VerificationStatus {
+  UNVERIFIED
+  PENDING
+  VERIFIED
+  REJECTED
+  SUSPENDED
+}
+
+enum ListingStatus {
+  DRAFT
+  PENDING_VERIFICATION
+  ACTIVE
+  PAUSED
+  REJECTED
+  SUSPENDED
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  ACTIVE
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+  DISPUTED
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  REFUNDED
+}
+
+model User {
+  id                String    @id @default(uuid())
+  firebaseUid       String?   @unique
+  phone             String    @unique
+  email             String?
+  name              String?
+  profileImageUrl   String?
+  accountStatus     String    @default("ACTIVE")
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  roles             UserRole[]
+  providerProfile   ProviderProfile?
+  vehicles          Vehicle[]
+  bookings          Booking[]
+  reviewsWritten    Review[]  @relation("Reviewer")
+  reviewsReceived   Review[]  @relation("Reviewee")
+  organizationMemberships OrganizationMember[]
+}
+
+model UserRole {
+  id        String   @id @default(uuid())
+  userId    String
+  role      Role
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@unique([userId, role])
+}
+
+model ProviderProfile {
+  id                 String             @id @default(uuid())
+  userId             String             @unique
+  providerType       ProviderType
+  verificationStatus VerificationStatus @default(UNVERIFIED)
+  displayName        String?
+  description        String?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  user               User               @relation(fields: [userId], references: [id])
+  parkingSpaces      ParkingSpace[]
+}
+
+model Organization {
+  id                 String             @id @default(uuid())
+  legalName          String
+  tradeName          String?
+  organizationType   ProviderType
+  gstin              String?
+  registrationNumber String?
+  officialEmail      String?
+  officialPhone      String?
+  website            String?
+  address            String
+  verificationStatus VerificationStatus @default(UNVERIFIED)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  members            OrganizationMember[]
+  parkingSpaces      ParkingSpace[]
+}
+
+model OrganizationMember {
+  id               String       @id @default(uuid())
+  organizationId   String
+  userId           String
+  role             String
+  authorizationStatus String    @default("PENDING")
+  createdAt        DateTime     @default(now())
+
+  organization     Organization @relation(fields: [organizationId], references: [id])
+  user             User         @relation(fields: [userId], references: [id])
+}
+
+model VehicleModel {
+  id           String    @id @default(uuid())
+  make         String
+  model        String
+  variant      String?
+  yearStart    Int?
+  yearEnd      Int?
+  vehicleType  String
+  lengthMm     Int
+  widthMm      Int
+  heightMm     Int
+  createdAt    DateTime  @default(now())
+
+  vehicles     Vehicle[]
+}
+
+model Vehicle {
+  id                 String       @id @default(uuid())
+  userId             String
+  vehicleModelId     String
+  registrationNumber String
+  vehicleColor       String?
+  isPrimary          Boolean      @default(false)
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  user               User         @relation(fields: [userId], references: [id])
+  vehicleModel       VehicleModel @relation(fields: [vehicleModelId], references: [id])
+  bookings           Booking[]
+}
+
+model ParkingSpace {
+  id                  String             @id @default(uuid())
+  providerId          String
+  organizationId      String?
+  title               String
+  description         String?
+  address             String
+  city                String
+  area                String
+  latitude            Float
+  longitude           Float
+  // Geometry field for PostGIS
+  location            Unsupported("geometry(Point, 4326)")?
+  spaceType           String
+  covered             Boolean            @default(false)
+  cctv                Boolean            @default(false)
+  security            Boolean            @default(false)
+  widthMm             Int
+  lengthMm            Int
+  heightClearanceMm   Int?
+  vehicleRestrictions String?
+  pricePerHour        Float
+  minimumDuration     Int                @default(1) // hours
+  maximumDuration     Int?               // hours
+  status              ListingStatus      @default(DRAFT)
+  verificationStatus  VerificationStatus @default(UNVERIFIED)
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+
+  provider            ProviderProfile    @relation(fields: [providerId], references: [id])
+  organization        Organization?      @relation(fields: [organizationId], references: [id])
+  images              ParkingImage[]
+  availabilities      Availability[]
+  bookings            Booking[]
+}
+
+model ParkingImage {
+  id             String       @id @default(uuid())
+  parkingSpaceId String
+  imageUrl       String
+  imageType      String       // ENTRY, SPACE, EXIT, SURROUNDINGS
+  displayOrder   Int          @default(0)
+  createdAt      DateTime     @default(now())
+
+  parkingSpace   ParkingSpace @relation(fields: [parkingSpaceId], references: [id])
+}
+
+model Availability {
+  id             String       @id @default(uuid())
+  parkingSpaceId String
+  dayOfWeek      Int          // 0-6 (Sunday-Saturday)
+  startTime      String       // "HH:MM"
+  endTime        String       // "HH:MM"
+  isAvailable    Boolean      @default(true)
+
+  parkingSpace   ParkingSpace @relation(fields: [parkingSpaceId], references: [id])
+}
+
+model Booking {
+  id               String        @id @default(uuid())
+  bookingReference String        @unique
+  userId           String
+  parkingSpaceId   String
+  vehicleId        String
+  startTime        DateTime
+  endTime          DateTime
+  price            Float
+  platformFee      Float
+  totalAmount      Float
+  status           BookingStatus @default(PENDING)
+  qrCode           String?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  user             User          @relation(fields: [userId], references: [id])
+  parkingSpace     ParkingSpace  @relation(fields: [parkingSpaceId], references: [id])
+  vehicle          Vehicle       @relation(fields: [vehicleId], references: [id])
+  payment          Payment?
+  review           Review?
+  evidence         BookingEvidence[]
+}
+
+model Payment {
+  id               String        @id @default(uuid())
+  bookingId        String        @unique
+  amount           Float
+  currency         String        @default("INR")
+  gateway          String        @default("MOCK")
+  gatewayPaymentId String?
+  status           PaymentStatus @default(PENDING)
+  paidAt           DateTime?
+  createdAt        DateTime      @default(now())
+
+  booking          Booking       @relation(fields: [bookingId], references: [id])
+}
+
+model Review {
+  id          String   @id @default(uuid())
+  bookingId   String   @unique
+  reviewerId  String
+  revieweeId  String
+  rating      Int
+  comment     String?
+  createdAt   DateTime @default(now())
+
+  booking     Booking  @relation(fields: [bookingId], references: [id])
+  reviewer    User     @relation("Reviewer", fields: [reviewerId], references: [id])
+  reviewee    User     @relation("Reviewee", fields: [revieweeId], references: [id])
+}
+
+model BookingEvidence {
+  id          String   @id @default(uuid())
+  bookingId   String
+  type        String   // BEFORE, AFTER
+  imageUrl    String
+  capturedAt  DateTime @default(now())
+  capturedBy  String
+
+  booking     Booking  @relation(fields: [bookingId], references: [id])
+}

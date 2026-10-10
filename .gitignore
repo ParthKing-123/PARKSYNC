@@ -1,0 +1,28 @@
+# Node.js
+node_modules/
+dist/
+npm-debug.log
+yarn-error.log
+.env
+
+# Flutter/Dart
+.dart_tool/
+.packages
+build/
+*.DS_Store
+.idea/
+.vscode/
+*.iml
+.metadata
+
+# iOS / Android native build files
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/Flutter.podspec
+android/.gradle/
+android/app/build/
+android/local.properties
+
+# Vite/React
+website/dist/
+admin/dist/
