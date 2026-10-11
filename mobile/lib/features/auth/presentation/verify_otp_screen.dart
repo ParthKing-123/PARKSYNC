@@ -3,6 +3,8 @@ import 'package:go_router/go_router.dart';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../core/api_client.dart';
+import '../../../../shared/widgets/car_loading_indicator.dart';
+import '../../../../shared/widgets/animated_floating_background.dart';
 
 class VerifyOtpScreen extends StatefulWidget {
   final String phoneNumber;
@@ -60,42 +62,51 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Verify your\nnumber',
-                style: Theme.of(context).textTheme.displayMedium,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Enter the 6-digit code sent to +91 ${widget.phoneNumber}',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-              const SizedBox(height: 48),
-              TextField(
-                controller: _otpController,
-                keyboardType: TextInputType.number,
-                maxLength: 6,
-                textAlign: TextAlign.center,
-                style: const TextStyle(letterSpacing: 24, fontSize: 24),
-                decoration: const InputDecoration(
-                  hintText: '000000',
-                  counterText: '',
+      body: AnimatedFloatingBackground(
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(32.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 24),
+                Text(
+                  'Verify your\nnumber.',
+                  style: Theme.of(context).textTheme.displayLarge,
                 ),
-              ),
-              const Spacer(),
-              ElevatedButton(
-                onPressed: _isLoading ? null : _verify,
-                child: _isLoading 
-                    ? const CircularProgressIndicator(color: Colors.black)
-                    : const Text('Verify & Continue'),
-              ),
-              const SizedBox(height: 16),
-            ],
+                const SizedBox(height: 16),
+                Text(
+                  'Enter the 6-digit code sent to +91 ${widget.phoneNumber}',
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                    height: 1.5,
+                  ),
+                ),
+                const SizedBox(height: 56),
+                TextField(
+                  controller: _otpController,
+                  keyboardType: TextInputType.number,
+                  maxLength: 6,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(letterSpacing: 24, fontSize: 28, fontWeight: FontWeight.bold),
+                  decoration: InputDecoration(
+                    hintText: '000000',
+                    counterText: '',
+                    filled: true,
+                    fillColor: Theme.of(context).colorScheme.surface,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 24),
+                  ),
+                ),
+                const Spacer(),
+                ElevatedButton(
+                  onPressed: _isLoading ? null : _verify,
+                  child: _isLoading 
+                      ? const CarLoadingIndicator(size: 30, color: Colors.black)
+                      : const Text('Verify & Continue'),
+                ),
+                const SizedBox(height: 16),
+              ],
+            ),
           ),
         ),
       ),

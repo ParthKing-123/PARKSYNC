@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/api_client.dart';
 import '../../../../shared/widgets/skeleton_loader.dart';
+import '../../../../shared/widgets/car_loading_indicator.dart';
 
 class AddVehicleScreen extends StatefulWidget {
   const AddVehicleScreen({super.key});
@@ -147,7 +148,7 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
               ElevatedButton(
                 onPressed: (_isLoading || _selectedModelId == null) ? null : _saveVehicle,
                 child: _isLoading 
-                    ? const CircularProgressIndicator(color: Colors.black)
+                    ? const CarLoadingIndicator(size: 30, color: Colors.black)
                     : const Text('Save & Continue'),
               ),
               const SizedBox(height: 16),

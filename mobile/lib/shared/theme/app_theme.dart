@@ -2,21 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
-  // Matiks-inspired Premium Dark Theme Colors
-  static const Color backgroundDark = Color(0xFF0A0A0C);
-  static const Color surfaceDark = Color(0xFF141416);
-  static const Color surfaceLight = Color(0xFF1E1E22);
+  // Parking & Navigation Intuitive Theme
+  static const Color backgroundDark = Color(0xFF0B0F19); // Midnight Asphalt
+  static const Color surfaceDark = Color(0xFF151C2C); // Elevated Asphalt
+  static const Color surfaceLight = Color(0xFF1E293B); // UI Elements
   
   // High contrast text
-  static const Color textPrimary = Color(0xFFF5F5F7);
-  static const Color textSecondary = Color(0xFFA1A1AA);
+  static const Color textPrimary = Color(0xFFF8FAFC);
+  static const Color textSecondary = Color(0xFF94A3B8);
   
-  // Premium Accent (Vibrant Electric Blue/Emerald)
-  static const Color accent = Color(0xFF00FF87); // Emerald/Neon Green
-  static const Color accentSecondary = Color(0xFF00E5FF); // Electric Blue
+  // Intuitive Accents (Navigation Blue & Road Paint Yellow)
+  static const Color accent = Color(0xFF00E5FF); // Electric Digital Cyan (Navigation path)
+  static const Color accentSecondary = Color(0xFFFFD600); // Neon Road Yellow (Markings)
   
   // Status Colors
-  static const Color success = Color(0xFF00FF87);
+  static const Color success = Color(0xFF00FFA3);
   static const Color error = Color(0xFFFF3366);
   static const Color warning = Color(0xFFFFB800);
 
@@ -35,43 +35,45 @@ class AppTheme {
         onPrimary: backgroundDark,
         onSurface: textPrimary,
       ),
-      textTheme: GoogleFonts.interTextTheme(
+      textTheme: GoogleFonts.manropeTextTheme(
         ThemeData.dark().textTheme,
       ).copyWith(
-        displayLarge: GoogleFonts.inter(
+        displayLarge: GoogleFonts.manrope(
           color: textPrimary,
-          fontSize: 32,
-          fontWeight: FontWeight.w700,
-          letterSpacing: -0.5,
+          fontSize: 36,
+          fontWeight: FontWeight.w800,
+          letterSpacing: -1.2,
+          height: 1.1,
         ),
-        displayMedium: GoogleFonts.inter(
+        displayMedium: GoogleFonts.manrope(
           color: textPrimary,
-          fontSize: 24,
+          fontSize: 28,
           fontWeight: FontWeight.w700,
-          letterSpacing: -0.5,
+          letterSpacing: -0.8,
         ),
-        bodyLarge: GoogleFonts.inter(
+        bodyLarge: GoogleFonts.manrope(
           color: textPrimary,
           fontSize: 16,
-          fontWeight: FontWeight.w400,
+          fontWeight: FontWeight.w500,
         ),
-        bodyMedium: GoogleFonts.inter(
+        bodyMedium: GoogleFonts.manrope(
           color: textSecondary,
-          fontSize: 14,
-          fontWeight: FontWeight.w400,
+          fontSize: 15,
+          fontWeight: FontWeight.w500,
         ),
-        labelLarge: GoogleFonts.inter(
+        labelLarge: GoogleFonts.manrope(
           color: backgroundDark,
           fontSize: 16,
-          fontWeight: FontWeight.w600,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.2,
         ),
       ),
       cardTheme: CardThemeData(
         color: surfaceDark,
         elevation: 0,
+        margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: const BorderSide(color: surfaceLight, width: 1),
+          borderRadius: BorderRadius.circular(24), // Softer cards
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
@@ -79,36 +81,37 @@ class AppTheme {
           backgroundColor: accent,
           foregroundColor: backgroundDark,
           elevation: 0,
-          minimumSize: const Size.fromHeight(56),
+          minimumSize: const Size.fromHeight(60), // Taller premium buttons
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(100), // Pill shape buttons
           ),
-          textStyle: GoogleFonts.inter(
+          textStyle: GoogleFonts.manrope(
             fontSize: 16,
-            fontWeight: FontWeight.w600,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 0.5,
           ),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: surfaceLight,
-        hintStyle: GoogleFonts.inter(color: textSecondary),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+        hintStyle: GoogleFonts.manrope(color: textSecondary, fontWeight: FontWeight.w500),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(100), // Pill shape inputs
           borderSide: BorderSide.none,
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(100),
           borderSide: BorderSide.none,
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: accent, width: 1),
+          borderRadius: BorderRadius.circular(100),
+          borderSide: const BorderSide(color: accent, width: 2),
         ),
         errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: error, width: 1),
+          borderRadius: BorderRadius.circular(100),
+          borderSide: const BorderSide(color: error, width: 2),
         ),
       ),
     );

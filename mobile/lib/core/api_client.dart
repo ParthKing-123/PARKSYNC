@@ -11,7 +11,7 @@ class ApiClient {
   }
 
   ApiClient._internal() {
-    String baseUrl = 'http://127.0.0.1:5000/api';
+    String baseUrl = 'http://localhost:5000/api';
     
     if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
       baseUrl = 'http://10.0.2.2:5000/api';
