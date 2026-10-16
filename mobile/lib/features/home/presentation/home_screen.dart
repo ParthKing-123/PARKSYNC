@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:parksync/l10n/app_localizations.dart';
 import '../../../core/locale_provider.dart';
 import '../../../core/theme_provider.dart';
@@ -15,6 +16,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   String _currentLocationText = 'Detecting GPS location...';
+  String _vehicleDisplay = 'Standard Passenger Car / SUV';
   bool _isLocating = false;
   int _navIndex = 0;
   final TextEditingController _searchCtrl = TextEditingController();
@@ -76,6 +78,18 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _fetchLocation();
+    _loadSavedVehicle();
+  }
+
+  Future<void> _loadSavedVehicle() async {
+    final prefs = await SharedPreferences.getInstance();
+    final name = prefs.getString('selected_vehicle_name');
+    final reg = prefs.getString('selected_vehicle_reg');
+    if (name != null && name.isNotEmpty && mounted) {
+      setState(() {
+        _vehicleDisplay = reg != null && reg.isNotEmpty ? '$name ($reg)' : name;
+      });
+    }
   }
 
   @override
@@ -442,13 +456,13 @@ class _HomeScreenState extends State<HomeScreen> {
                       color: AppTheme.cyan, size: 20),
                 ),
                 const SizedBox(width: 12),
-                const Expanded(
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Selected Vehicle', style: TextStyle(color: Colors.grey, fontSize: 11)),
-                      Text('Standard Passenger Car / SUV',
-                          style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                      const Text('Selected Vehicle', style: TextStyle(color: Colors.grey, fontSize: 11)),
+                      Text(_vehicleDisplay,
+                          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
                     ],
                   ),
                 ),
