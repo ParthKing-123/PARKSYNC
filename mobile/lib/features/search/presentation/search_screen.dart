@@ -7,6 +7,32 @@ import 'package:dio/dio.dart';
 import 'package:parksync/l10n/app_localizations.dart';
 import '../../../shared/theme/app_theme.dart';
 
+class SearchParkingSpot {
+  final String id;
+  final String name;
+  final String area;
+  final double distanceKm;
+  final double ratePerHour;
+  final bool isCovered;
+  final bool hasCctv;
+  final bool isVerified;
+  final LatLng position;
+  final int availableBays;
+
+  SearchParkingSpot({
+    required this.id,
+    required this.name,
+    required this.area,
+    required this.distanceKm,
+    required this.ratePerHour,
+    required this.isCovered,
+    required this.hasCctv,
+    required this.isVerified,
+    required this.position,
+    required this.availableBays,
+  });
+}
+
 class SearchScreen extends StatefulWidget {
   final String destination;
   const SearchScreen({super.key, required this.destination});
@@ -16,11 +42,17 @@ class SearchScreen extends StatefulWidget {
 }
 
 class _SearchScreenState extends State<SearchScreen> {
-  // Default to central India coordinates
-  LatLng _mapCenter = const LatLng(20.5937, 78.9629); // India center
+  // Default to Pune / Central coordinates as initial anchor
+  LatLng _mapCenter = const LatLng(18.5204, 73.8567);
+  LatLng? _userDeviceLocation;
+  String? _searchedDestinationTitle;
+  LatLng? _searchedDestinationLatLng;
+  String? _selectedSpotId;
+
   final MapController _mapController = MapController();
   late TextEditingController _searchCtrl;
   bool _isSearchingLocation = false;
+  bool _isDetectingGps = false;
   List<Map<String, dynamic>> _osmSearchResults = [];
 
   // Filter switches
@@ -28,64 +60,21 @@ class _SearchScreenState extends State<SearchScreen> {
   bool _filterCovered = false;
   bool _filterCctv = false;
 
-  final List<Map<String, dynamic>> _allSpots = [
-    {
-      'id': 'p1',
-      'name': 'Metro Grand Parking Bay',
-      'area': 'Station Central Hub',
-      'distance': '0.3',
-      'rate': 50,
-      'covered': true,
-      'cctv': true,
-      'verified': true,
-      'lat': 20.5937,
-      'lng': 78.9629,
-    },
-    {
-      'id': 'p2',
-      'name': 'Central Commercial Plaza',
-      'area': 'Business District',
-      'distance': '1.2',
-      'rate': 40,
-      'covered': true,
-      'cctv': true,
-      'verified': true,
-      'lat': 20.5980,
-      'lng': 78.9680,
-    },
-    {
-      'id': 'p3',
-      'name': 'Tech Hub Multi-Level Lot',
-      'area': 'Cyber Park Avenue',
-      'distance': '2.1',
-      'rate': 30,
-      'covered': false,
-      'cctv': true,
-      'verified': true,
-      'lat': 20.5890,
-      'lng': 78.9570,
-    },
-    {
-      'id': 'p4',
-      'name': 'National Mall Basement Lot',
-      'area': 'City Center Mall',
-      'distance': '1.8',
-      'rate': 35,
-      'covered': true,
-      'cctv': true,
-      'verified': true,
-      'lat': 20.6010,
-      'lng': 78.9710,
-    },
-  ];
+  List<SearchParkingSpot> _nearbySpots = [];
 
   @override
   void initState() {
     super.initState();
     _searchCtrl = TextEditingController(text: widget.destination);
-    _initUserLocation();
+
+    // Initial spots generation around initial center
+    _nearbySpots = _generateSpotsAround(_mapCenter, widget.destination.isNotEmpty ? widget.destination : 'Central');
+
+    // Run initial search or location resolution
     if (widget.destination.isNotEmpty) {
       _searchOpenStreetMap(widget.destination);
+    } else {
+      _detectCurrentLocation(silent: true);
     }
   }
 
@@ -95,37 +84,175 @@ class _SearchScreenState extends State<SearchScreen> {
     super.dispose();
   }
 
-  Future<void> _initUserLocation() async {
-    try {
-      final pos = await Geolocator.getLastKnownPosition();
-      if (pos != null && mounted) {
-        final userLatLng = LatLng(pos.latitude, pos.longitude);
-        setState(() {
-          _mapCenter = userLatLng;
-          // Dynamically anchor mock parking spots near user position
-          _allSpots[0]['lat'] = pos.latitude + 0.003;
-          _allSpots[0]['lng'] = pos.longitude + 0.002;
-          _allSpots[1]['lat'] = pos.latitude - 0.004;
-          _allSpots[1]['lng'] = pos.longitude + 0.005;
-          _allSpots[2]['lat'] = pos.latitude + 0.006;
-          _allSpots[2]['lng'] = pos.longitude - 0.003;
-          _allSpots[3]['lat'] = pos.latitude - 0.002;
-          _allSpots[3]['lng'] = pos.longitude - 0.005;
-        });
-        _mapController.move(userLatLng, 14.5);
-      }
-    } catch (_) {}
+  // ── Dynamic Spots Generator around searched location ──────────────────
+  List<SearchParkingSpot> _generateSpotsAround(LatLng center, String localityName) {
+    final cleanName = localityName.trim().isNotEmpty ? localityName.trim() : 'Metro';
+    return [
+      SearchParkingSpot(
+        id: 'spot_1',
+        name: '$cleanName Metro & Grand Bay',
+        area: '$cleanName Central',
+        distanceKm: 0.2,
+        ratePerHour: 50,
+        isCovered: true,
+        hasCctv: true,
+        isVerified: true,
+        position: LatLng(center.latitude + 0.0028, center.longitude + 0.0021),
+        availableBays: 6,
+      ),
+      SearchParkingSpot(
+        id: 'spot_2',
+        name: '$cleanName Commercial Plaza Lot',
+        area: '$cleanName Main Road',
+        distanceKm: 0.5,
+        ratePerHour: 40,
+        isCovered: true,
+        hasCctv: true,
+        isVerified: true,
+        position: LatLng(center.latitude - 0.0035, center.longitude + 0.0042),
+        availableBays: 4,
+      ),
+      SearchParkingSpot(
+        id: 'spot_3',
+        name: '$cleanName Safe Basement Garage',
+        area: '$cleanName West Sector',
+        distanceKm: 0.8,
+        ratePerHour: 35,
+        isCovered: true,
+        hasCctv: true,
+        isVerified: true,
+        position: LatLng(center.latitude + 0.0052, center.longitude - 0.0031),
+        availableBays: 11,
+      ),
+      SearchParkingSpot(
+        id: 'spot_4',
+        name: '$cleanName Premium Covered Slot',
+        area: '$cleanName Junction',
+        distanceKm: 1.1,
+        ratePerHour: 60,
+        isCovered: true,
+        hasCctv: true,
+        isVerified: true,
+        position: LatLng(center.latitude - 0.0022, center.longitude - 0.0048),
+        availableBays: 2,
+      ),
+    ];
   }
 
-  // ── OpenStreetMap Nominatim Geocoding Search (100% Free, No Billing) ──
-  Future<void> _searchOpenStreetMap(String query) async {
-    if (query.trim().isEmpty) return;
+  // ── Auto-Detect Device Location via GPS ────────────────────────────────
+  Future<void> _detectCurrentLocation({bool silent = false}) async {
+    setState(() => _isDetectingGps = true);
+    try {
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
 
-    setState(() => _isSearchingLocation = true);
+      if (permission == LocationPermission.deniedForever) {
+        if (!silent && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              behavior: SnackBarBehavior.floating,
+              content: Text('Location permission is permanently denied. Please enable it in device settings.'),
+            ),
+          );
+        }
+        setState(() => _isDetectingGps = false);
+        return;
+      }
+
+      final position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+        timeLimit: const Duration(seconds: 8),
+      );
+
+      final userLatLng = LatLng(position.latitude, position.longitude);
+      String detectedArea = 'My Location';
+
+      // Reverse geocode via Nominatim to extract real locality/area name
+      try {
+        final dio = Dio();
+        final res = await dio.get(
+          'https://nominatim.openstreetmap.org/reverse?lat=${position.latitude}&lon=${position.longitude}&format=json',
+          options: Options(headers: {
+            'User-Agent': 'ParkSync-India-Mobile/1.0 (contact@parksync.app)',
+          }),
+        );
+        if (res.data != null && res.data['address'] != null) {
+          final addr = res.data['address'];
+          detectedArea = addr['suburb'] ??
+              addr['neighbourhood'] ??
+              addr['city_district'] ??
+              addr['city'] ??
+              addr['town'] ??
+              'My Location';
+        }
+      } catch (_) {}
+
+      if (mounted) {
+        setState(() {
+          _userDeviceLocation = userLatLng;
+          _mapCenter = userLatLng;
+          _searchedDestinationTitle = detectedArea;
+          _searchedDestinationLatLng = userLatLng;
+          _searchCtrl.text = detectedArea;
+          _nearbySpots = _generateSpotsAround(userLatLng, detectedArea);
+          _selectedSpotId = _nearbySpots.first.id;
+          _isDetectingGps = false;
+        });
+
+        _mapController.move(userLatLng, 15.5);
+
+        if (!silent) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              behavior: SnackBarBehavior.floating,
+              backgroundColor: AppTheme.success,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              content: Row(
+                children: [
+                  const Icon(Icons.my_location_rounded, color: Colors.white, size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Location auto-detected: $detectedArea',
+                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isDetectingGps = false);
+        if (!silent) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              behavior: SnackBarBehavior.floating,
+              content: Text('Could not auto-detect location: $e'),
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  // ── OpenStreetMap Nominatim Geocoding Search ──────────────────────────
+  Future<void> _searchOpenStreetMap(String query) async {
+    final cleanQuery = query.trim();
+    if (cleanQuery.isEmpty) return;
+
+    setState(() {
+      _isSearchingLocation = true;
+      _osmSearchResults.clear();
+    });
 
     try {
       final url =
-          'https://nominatim.openstreetmap.org/search?q=${Uri.encodeComponent(query)}&format=json&addressdetails=1&limit=5';
+          'https://nominatim.openstreetmap.org/search?q=${Uri.encodeComponent(cleanQuery)}&format=json&addressdetails=1&limit=5';
       final dio = Dio();
       final response = await dio.get(
         url,
@@ -139,49 +266,80 @@ class _SearchScreenState extends State<SearchScreen> {
         final first = data.first;
         final lat = double.tryParse(first['lat'].toString()) ?? _mapCenter.latitude;
         final lon = double.tryParse(first['lon'].toString()) ?? _mapCenter.longitude;
+        final displayName = first['display_name'] ?? cleanQuery;
 
-        final newCenter = LatLng(lat, lon);
+        final parts = displayName.toString().split(',');
+        final shortTitle = parts.length > 1
+            ? '${parts[0].trim()}, ${parts[1].trim()}'
+            : parts.first.trim();
+        final localityKey = parts.first.trim();
+
+        final target = LatLng(lat, lon);
+
         if (mounted) {
           setState(() {
-            _mapCenter = newCenter;
+            _mapCenter = target;
+            _searchedDestinationTitle = shortTitle;
+            _searchedDestinationLatLng = target;
+            _nearbySpots = _generateSpotsAround(target, localityKey);
+            _selectedSpotId = _nearbySpots.first.id;
             _osmSearchResults = data.map((item) => {
-              'name': item['display_name'] ?? '',
-              'lat': double.tryParse(item['lat'].toString()) ?? lat,
-              'lon': double.tryParse(item['lon'].toString()) ?? lon,
-            }).toList();
-
-            // Re-anchor spots near searched OSM location
-            _allSpots[0]['lat'] = lat + 0.003;
-            _allSpots[0]['lng'] = lon + 0.002;
-            _allSpots[1]['lat'] = lat - 0.004;
-            _allSpots[1]['lng'] = lon + 0.005;
-            _allSpots[2]['lat'] = lat + 0.006;
-            _allSpots[2]['lng'] = lon - 0.003;
-            _allSpots[3]['lat'] = lat - 0.002;
-            _allSpots[3]['lng'] = lon - 0.005;
-
+                  'name': item['display_name'] ?? '',
+                  'lat': double.tryParse(item['lat'].toString()) ?? lat,
+                  'lon': double.tryParse(item['lon'].toString()) ?? lon,
+                }).toList();
             _isSearchingLocation = false;
           });
-          _mapController.move(newCenter, 14.5);
+          _mapController.move(target, 15.0);
         }
       } else {
-        if (mounted) setState(() => _isSearchingLocation = false);
+        // Even if Nominatim had no remote matches, dynamically anchor around current center with searched name!
+        if (mounted) {
+          setState(() {
+            _searchedDestinationTitle = cleanQuery;
+            _searchedDestinationLatLng = _mapCenter;
+            _nearbySpots = _generateSpotsAround(_mapCenter, cleanQuery);
+            _selectedSpotId = _nearbySpots.first.id;
+            _isSearchingLocation = false;
+          });
+        }
       }
     } catch (_) {
-      if (mounted) setState(() => _isSearchingLocation = false);
+      if (mounted) {
+        setState(() {
+          _searchedDestinationTitle = cleanQuery;
+          _searchedDestinationLatLng = _mapCenter;
+          _nearbySpots = _generateSpotsAround(_mapCenter, cleanQuery);
+          _selectedSpotId = _nearbySpots.first.id;
+          _isSearchingLocation = false;
+        });
+      }
     }
   }
 
-  List<Map<String, dynamic>> get _filteredResults {
-    final q = _searchCtrl.text.toLowerCase().trim();
-    return _allSpots.where((spot) {
-      if (q.isNotEmpty) {
-        final name = spot['name'].toString().toLowerCase();
-        final area = spot['area'].toString().toLowerCase();
-        if (!name.contains(q) && !area.contains(q)) return false;
+  // ── Zoom In / Zoom Out Controls ───────────────────────────────────────
+  void _zoomIn() {
+    try {
+      final currentZoom = _mapController.camera.zoom;
+      if (currentZoom < 18.0) {
+        _mapController.move(_mapController.camera.center, currentZoom + 1.0);
       }
-      if (_filterCovered && spot['covered'] != true) return false;
-      if (_filterCctv && spot['cctv'] != true) return false;
+    } catch (_) {}
+  }
+
+  void _zoomOut() {
+    try {
+      final currentZoom = _mapController.camera.zoom;
+      if (currentZoom > 3.0) {
+        _mapController.move(_mapController.camera.center, currentZoom - 1.0);
+      }
+    } catch (_) {}
+  }
+
+  List<SearchParkingSpot> get _displayedSpots {
+    return _nearbySpots.where((spot) {
+      if (_filterCovered && !spot.isCovered) return false;
+      if (_filterCctv && !spot.hasCctv) return false;
       return true;
     }).toList();
   }
@@ -269,48 +427,107 @@ class _SearchScreenState extends State<SearchScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final results = _filteredResults;
+    final spots = _displayedSpots;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // Build OpenStreetMap markers for parking bays
+    // Build OpenStreetMap markers
     final markers = <Marker>[
-      // User / Searched center marker
-      Marker(
-        point: _mapCenter,
-        width: 44,
-        height: 44,
-        child: Container(
-          decoration: BoxDecoration(
-            color: AppTheme.cyan.withValues(alpha: 0.2),
-            shape: BoxShape.circle,
-            border: Border.all(color: AppTheme.cyan, width: 2),
-          ),
-          child: const Center(
-            child: Icon(Icons.my_location_rounded, color: AppTheme.cyan, size: 22),
+      // 1. Device GPS user location marker
+      if (_userDeviceLocation != null)
+        Marker(
+          point: _userDeviceLocation!,
+          width: 44,
+          height: 44,
+          child: Container(
+            decoration: BoxDecoration(
+              color: AppTheme.cyan.withValues(alpha: 0.25),
+              shape: BoxShape.circle,
+              border: Border.all(color: AppTheme.cyan, width: 2.5),
+            ),
+            child: const Center(
+              child: Icon(Icons.my_location_rounded, color: AppTheme.cyan, size: 22),
+            ),
           ),
         ),
-      ),
-      // Parking spots markers
-      ...results.map((spot) {
-        final double lat = spot['lat'] ?? _mapCenter.latitude;
-        final double lng = spot['lng'] ?? _mapCenter.longitude;
+
+      // 2. Searched Destination pin (Exact searched location)
+      if (_searchedDestinationLatLng != null)
+        Marker(
+          point: _searchedDestinationLatLng!,
+          width: 170,
+          height: 60,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEF4444),
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.35),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.location_on_rounded, color: Colors.white, size: 14),
+                    const SizedBox(width: 4),
+                    Flexible(
+                      child: Text(
+                        _searchedDestinationTitle ?? 'Destination',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 11,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.arrow_drop_down, color: Color(0xFFEF4444), size: 18),
+            ],
+          ),
+        ),
+
+      // 3. Nearby Parking Spot Markers with dynamic pricing tags
+      ...spots.map((spot) {
+        final isSelected = _selectedSpotId == spot.id;
 
         return Marker(
-          point: LatLng(lat, lng),
-          width: 90,
-          height: 44,
+          point: spot.position,
+          width: isSelected ? 110 : 96,
+          height: 52,
           child: GestureDetector(
-            onTap: () => context.push('/parking-detail', extra: spot['id']),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            onTap: () {
+              setState(() => _selectedSpotId = spot.id);
+              _mapController.move(spot.position, 16.0);
+            },
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 250),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF0F1420) : Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: AppTheme.cyan, width: 1.5),
+                color: isSelected
+                    ? AppTheme.cyan
+                    : (isDark ? const Color(0xFF0F1420) : Colors.white),
+                borderRadius: BorderRadius.circular(22),
+                border: Border.all(
+                  color: isSelected ? Colors.white : AppTheme.cyan,
+                  width: isSelected ? 2.5 : 1.5,
+                ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.3),
-                    blurRadius: 8,
+                    color: isSelected
+                        ? AppTheme.cyan.withValues(alpha: 0.5)
+                        : Colors.black.withValues(alpha: 0.3),
+                    blurRadius: isSelected ? 12 : 6,
                     offset: const Offset(0, 3),
                   ),
                 ],
@@ -318,14 +535,18 @@ class _SearchScreenState extends State<SearchScreen> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.local_parking_rounded, color: AppTheme.cyan, size: 16),
+                  Icon(
+                    Icons.local_parking_rounded,
+                    color: isSelected ? Colors.black : AppTheme.cyan,
+                    size: 16,
+                  ),
                   const SizedBox(width: 4),
                   Text(
-                    '₹${spot['rate']}/h',
+                    '₹${spot.ratePerHour.toInt()}/h',
                     style: TextStyle(
                       fontWeight: FontWeight.w800,
                       fontSize: 12,
-                      color: isDark ? Colors.white : Colors.black,
+                      color: isSelected ? Colors.black : (isDark ? Colors.white : Colors.black),
                     ),
                   ),
                 ],
@@ -348,6 +569,9 @@ class _SearchScreenState extends State<SearchScreen> {
               initialZoom: 14.5,
               minZoom: 3.0,
               maxZoom: 18.0,
+              interactionOptions: const InteractionOptions(
+                flags: InteractiveFlag.all,
+              ),
             ),
             children: [
               TileLayer(
@@ -361,7 +585,7 @@ class _SearchScreenState extends State<SearchScreen> {
           // OSM Attribution Badge
           Positioned(
             right: 8,
-            top: MediaQuery.paddingOf(context).top + 80,
+            top: MediaQuery.paddingOf(context).top + 130,
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
@@ -375,12 +599,13 @@ class _SearchScreenState extends State<SearchScreen> {
             ),
           ),
 
-          // ── 2. Top Interactive OpenStreetMap Search Bar ───────────────
+          // ── 2. Top Interactive OpenStreetMap Search Bar + Auto-detect Chip
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 10.0),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
@@ -473,6 +698,58 @@ class _SearchScreenState extends State<SearchScreen> {
                     ],
                   ),
 
+                  const SizedBox(height: 8),
+
+                  // Quick Auto-Detect Location Pill Button
+                  Row(
+                    children: [
+                      const SizedBox(width: 48),
+                      InkWell(
+                        onTap: _isDetectingGps ? null : () => _detectCurrentLocation(),
+                        borderRadius: BorderRadius.circular(20),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.surface,
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: AppTheme.cyan.withValues(alpha: 0.4),
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.15),
+                                blurRadius: 6,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (_isDetectingGps)
+                                const SizedBox(
+                                  width: 12,
+                                  height: 12,
+                                  child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.cyan),
+                                )
+                              else
+                                const Icon(Icons.my_location_rounded, size: 13, color: AppTheme.cyan),
+                              const SizedBox(width: 6),
+                              Text(
+                                _isDetectingGps ? 'Detecting GPS location...' : 'Auto-detect my location',
+                                style: TextStyle(
+                                  color: isDark ? AppTheme.cyan : AppTheme.cyanLight,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+
                   // OpenStreetMap Instant Nominatim Suggestions Dropdown
                   if (_osmSearchResults.isNotEmpty)
                     Container(
@@ -508,12 +785,22 @@ class _SearchScreenState extends State<SearchScreen> {
                               final lat = item['lat'];
                               final lon = item['lon'];
                               final target = LatLng(lat, lon);
+                              final rawName = item['name'].toString();
+                              final parts = rawName.split(',');
+                              final shortName = parts.length > 1
+                                  ? '${parts[0].trim()}, ${parts[1].trim()}'
+                                  : parts.first.trim();
+
                               setState(() {
                                 _mapCenter = target;
-                                _searchCtrl.text = item['name'].toString().split(',').first;
+                                _searchedDestinationTitle = shortName;
+                                _searchedDestinationLatLng = target;
+                                _searchCtrl.text = shortName;
+                                _nearbySpots = _generateSpotsAround(target, parts.first.trim());
+                                _selectedSpotId = _nearbySpots.first.id;
                                 _osmSearchResults.clear();
                               });
-                              _mapController.move(target, 15.0);
+                              _mapController.move(target, 15.5);
                             },
                           );
                         }).toList(),
@@ -524,35 +811,111 @@ class _SearchScreenState extends State<SearchScreen> {
             ),
           ),
 
-          // ── 3. Bottom Carousel Cards ──────────────────────────────────
+          // ── 3. Floating Map Controls (Zoom In/Out + Auto-Detect GPS) ────
+          Positioned(
+            right: 14,
+            bottom: 236, // Placed directly above the parking cards carousel
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Auto-Detect Current GPS Location Button
+                _buildMapFloatingButton(
+                  icon: Icons.my_location_rounded,
+                  tooltip: 'Auto-detect my location',
+                  onPressed: _isDetectingGps ? null : () => _detectCurrentLocation(),
+                  isAccent: true,
+                  isLoading: _isDetectingGps,
+                ),
+                const SizedBox(height: 12),
+                // Zoom In (+) Button
+                _buildMapFloatingButton(
+                  icon: Icons.add_rounded,
+                  tooltip: 'Zoom in',
+                  onPressed: _zoomIn,
+                ),
+                const SizedBox(height: 6),
+                // Zoom Out (-) Button
+                _buildMapFloatingButton(
+                  icon: Icons.remove_rounded,
+                  tooltip: 'Zoom out',
+                  onPressed: _zoomOut,
+                ),
+              ],
+            ),
+          ),
+
+          // ── 4. Bottom Parking Carousel Cards ──────────────────────────
           Align(
             alignment: Alignment.bottomCenter,
             child: SafeArea(
               child: Container(
-                height: 200,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                child: results.isEmpty
-                    ? Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 20),
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.surface,
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: const Center(
-                          child: Text('No parking spots found for this query.'),
-                        ),
-                      )
-                    : ListView.separated(
-                        scrollDirection: Axis.horizontal,
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        itemCount: results.length,
-                        separatorBuilder: (_, __) => const SizedBox(width: 12),
-                        itemBuilder: (context, index) {
-                          final spot = results[index];
-                          return _buildSearchCard(context, spot, isDark);
-                        },
+                height: 220,
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Heading showing matching spots count and destination
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 2.0),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 8,
+                            height: 8,
+                            decoration: const BoxDecoration(
+                              color: AppTheme.success,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              '${spots.length} bays available near ${_searchedDestinationTitle ?? 'area'}',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w800,
+                                color: Theme.of(context).colorScheme.onSurface,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
                       ),
+                    ),
+                    const SizedBox(height: 6),
+
+                    // Cards list
+                    Expanded(
+                      child: spots.isEmpty
+                          ? Container(
+                              margin: const EdgeInsets.symmetric(horizontal: 20),
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).colorScheme.surface,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: Theme.of(context).dividerTheme.color ?? const Color(0xFF1C2A42),
+                                ),
+                              ),
+                              child: const Center(
+                                child: Text('No parking bays match the active filters.'),
+                              ),
+                            )
+                          : ListView.separated(
+                              scrollDirection: Axis.horizontal,
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              itemCount: spots.length,
+                              separatorBuilder: (_, __) => const SizedBox(width: 12),
+                              itemBuilder: (context, index) {
+                                final spot = spots[index];
+                                final isSelected = _selectedSpotId == spot.id;
+                                return _buildSearchCard(context, spot, isDark, isSelected);
+                              },
+                            ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -561,28 +924,79 @@ class _SearchScreenState extends State<SearchScreen> {
     );
   }
 
-  Widget _buildSearchCard(BuildContext context, Map<String, dynamic> spot, bool isDark) {
+  Widget _buildMapFloatingButton({
+    required IconData icon,
+    required String tooltip,
+    required VoidCallback? onPressed,
+    bool isAccent = false,
+    bool isLoading = false,
+  }) {
     return Container(
-      width: 280,
+      width: 44,
+      height: 44,
+      decoration: BoxDecoration(
+        color: isAccent ? AppTheme.cyan : Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: isAccent ? AppTheme.cyan : (Theme.of(context).dividerTheme.color ?? const Color(0xFF1C2A42)),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.3),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: IconButton(
+        padding: EdgeInsets.zero,
+        icon: isLoading
+            ? const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black),
+              )
+            : Icon(
+                icon,
+                color: isAccent ? Colors.black : Theme.of(context).colorScheme.onSurface,
+                size: 22,
+              ),
+        tooltip: tooltip,
+        onPressed: onPressed,
+      ),
+    );
+  }
+
+  Widget _buildSearchCard(BuildContext context, SearchParkingSpot spot, bool isDark, bool isSelected) {
+    return Container(
+      width: 290,
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
-          color: Theme.of(context).dividerTheme.color ?? const Color(0xFF1C2A42),
+          color: isSelected
+              ? AppTheme.cyan
+              : (Theme.of(context).dividerTheme.color ?? const Color(0xFF1C2A42)),
+          width: isSelected ? 2.0 : 1.0,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.35 : 0.08),
-            blurRadius: 16,
-            offset: const Offset(0, 6),
+            color: isSelected
+                ? AppTheme.cyan.withValues(alpha: 0.25)
+                : Colors.black.withValues(alpha: isDark ? 0.35 : 0.08),
+            blurRadius: isSelected ? 16 : 8,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
       child: InkWell(
-        onTap: () => context.push('/parking-detail', extra: spot['id']),
+        onTap: () {
+          setState(() => _selectedSpotId = spot.id);
+          _mapController.move(spot.position, 16.0);
+        },
         borderRadius: BorderRadius.circular(18),
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.all(14.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -591,15 +1005,16 @@ class _SearchScreenState extends State<SearchScreen> {
                 children: [
                   Expanded(
                     child: Text(
-                      spot['name'],
+                      spot.name,
                       style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                            fontWeight: FontWeight.w700,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 14,
                           ),
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
                   Text(
-                    '₹${spot['rate']}/hr',
+                    '₹${spot.ratePerHour.toInt()}/hr',
                     style: TextStyle(
                       color: isDark ? AppTheme.cyan : AppTheme.cyanLight,
                       fontWeight: FontWeight.w800,
@@ -608,46 +1023,62 @@ class _SearchScreenState extends State<SearchScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 3),
               Text(
-                '${spot['distance']} km away • ${spot['area']}',
-                style: Theme.of(context).textTheme.bodySmall,
+                '${spot.distanceKm} km away • ${spot.area}',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 11),
               ),
               const Spacer(),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: AppTheme.cyan.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.verified_rounded,
-                      size: 13,
-                      color: isDark ? AppTheme.cyan : AppTheme.cyanLight,
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: AppTheme.success.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(6),
                     ),
-                    const SizedBox(width: 4),
-                    Text(
-                      'Platform Verified Host ✓',
-                      style: TextStyle(
-                        color: isDark ? AppTheme.cyan : AppTheme.cyanLight,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                      ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.verified_rounded,
+                          size: 11,
+                          color: AppTheme.success,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${spot.availableBays} bays free ✓',
+                          style: const TextStyle(
+                            color: AppTheme.success,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
+                  ),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                      minimumSize: const Size(80, 32),
+                      backgroundColor: AppTheme.cyan,
+                      foregroundColor: Colors.black,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    onPressed: () => context.push('/parking-detail', extra: spot.id),
+                    child: const Text('Book Spot', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 11)),
+                  ),
+                ],
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 8),
               Row(
                 children: [
-                  if (spot['covered'] == true) _buildChip('Covered'),
+                  if (spot.isCovered) _buildChip('Covered Bay'),
                   const SizedBox(width: 6),
-                  if (spot['cctv'] == true) _buildChip('CCTV'),
+                  if (spot.hasCctv) _buildChip('CCTV 24/7'),
                   const SizedBox(width: 6),
-                  _buildChip('Verified ✓'),
+                  _buildChip('Host Verified ✓'),
                 ],
               ),
             ],
@@ -659,7 +1090,7 @@ class _SearchScreenState extends State<SearchScreen> {
 
   Widget _buildChip(String text) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(6),
@@ -668,7 +1099,7 @@ class _SearchScreenState extends State<SearchScreen> {
         text,
         style: TextStyle(
           color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.75),
-          fontSize: 10,
+          fontSize: 9,
           fontWeight: FontWeight.w600,
         ),
       ),
