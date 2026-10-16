@@ -1,13 +1,16 @@
-import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:parksync/l10n/app_localizations.dart';
 import '../../../shared/theme/app_theme.dart';
 import '../../../core/locale_provider.dart';
+import '../../../core/theme_provider.dart';
 
-/// Guest-facing home — shows parking listings immediately.
-/// No login required to browse. Login is prompted only when booking.
+/// Main Guest & Marketplace Screen
+/// - Fixed top AppBar (stays at top within screen metrics, never scrolls down)
+/// - Light / Dark mode toggle button
+/// - Functional 4 bottom tabs: Explore, Saved, Bookings, Profile
+/// - Interactive destination search with real typing and live filtering
+/// - Working filter chips (All, Covered, CCTV, Verified, Under ₹40)
 class GuestHomeScreen extends StatefulWidget {
   const GuestHomeScreen({super.key});
 
@@ -15,41 +18,20 @@ class GuestHomeScreen extends StatefulWidget {
   State<GuestHomeScreen> createState() => _GuestHomeScreenState();
 }
 
-class _GuestHomeScreenState extends State<GuestHomeScreen> with TickerProviderStateMixin {
-  final TextEditingController _searchCtrl = TextEditingController();
+class _GuestHomeScreenState extends State<GuestHomeScreen> {
   int _navIndex = 0;
-  late AnimationController _bgController;
+  final TextEditingController _searchCtrl = TextEditingController();
+  String _selectedFilter = 'All';
+  final Set<String> _savedSpotIds = {'p1'}; // Default one spot saved for demo
 
-  @override
-  void initState() {
-    super.initState();
-    _bgController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 20),
-    )..repeat();
-
-    SystemChrome.setSystemUIOverlayStyle(
-      const SystemUiOverlayStyle(
-        statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.light,
-      ),
-    );
-  }
-
-  @override
-  void dispose() {
-    _bgController.dispose();
-    _searchCtrl.dispose();
-    super.dispose();
-  }
-
-  // ── Mock data ──────────────────────────────────────────────────────────
-  static final List<Map<String, dynamic>> _mockListings = [
+  // Master listing data (Pan-India)
+  final List<Map<String, dynamic>> _allListings = [
     {
       'id': 'p1',
       'name': 'Metro Grand Parking Bay',
+      'area': 'Station Central Hub',
       'distance': '0.3',
-      'rate': '60',
+      'rate': 50,
       'covered': true,
       'cctv': true,
       'verified': true,
@@ -59,21 +41,23 @@ class _GuestHomeScreenState extends State<GuestHomeScreen> with TickerProviderSt
     {
       'id': 'p2',
       'name': 'Central Commercial Plaza',
+      'area': 'Business District',
       'distance': '1.2',
-      'rate': '40',
+      'rate': 40,
       'covered': true,
       'cctv': true,
-      'verified': false,
+      'verified': true,
       'spots': 12,
       'color': const Color(0xFF7C3AED),
     },
     {
       'id': 'p3',
       'name': 'Tech Hub Multi-Level Lot',
+      'area': 'Cyber Park Avenue',
       'distance': '2.4',
-      'rate': '30',
+      'rate': 30,
       'covered': false,
-      'cctv': false,
+      'cctv': true,
       'verified': true,
       'spots': 7,
       'color': const Color(0xFF10B981),
@@ -81,404 +65,477 @@ class _GuestHomeScreenState extends State<GuestHomeScreen> with TickerProviderSt
     {
       'id': 'p4',
       'name': 'Station Road Secure Bay',
+      'area': 'Terminal North Gate',
       'distance': '3.1',
-      'rate': '20',
-      'covered': false,
-      'cctv': true,
-      'verified': true,
+      'rate': 25,
+      'covered': true,
+      'cctv': false,
+      'verified': false,
       'spots': 20,
       'color': const Color(0xFFFFB800),
+    },
+    {
+      'id': 'p5',
+      'name': 'National Mall Basement Lot',
+      'area': 'City Center Mall',
+      'distance': '1.8',
+      'rate': 35,
+      'covered': true,
+      'cctv': true,
+      'verified': true,
+      'spots': 15,
+      'color': const Color(0xFF00D4FF),
     },
   ];
 
   @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  // Get dynamically filtered spots
+  List<Map<String, dynamic>> get _filteredSpots {
+    final query = _searchCtrl.text.toLowerCase().trim();
+
+    return _allListings.where((spot) {
+      // 1. Text search filter
+      if (query.isNotEmpty) {
+        final name = spot['name'].toString().toLowerCase();
+        final area = spot['area'].toString().toLowerCase();
+        if (!name.contains(query) && !area.contains(query)) {
+          return false;
+        }
+      }
+
+      // 2. Chip filter
+      if (_selectedFilter == 'Covered' && spot['covered'] != true) return false;
+      if (_selectedFilter == 'CCTV' && spot['cctv'] != true) return false;
+      if (_selectedFilter == 'Verified' && spot['verified'] != true) return false;
+      if (_selectedFilter == 'Under ₹40' && (spot['rate'] as int) > 40) return false;
+
+      return true;
+    }).toList();
+  }
+
+  void _toggleSaveSpot(String id) {
+    setState(() {
+      if (_savedSpotIds.contains(id)) {
+        _savedSpotIds.remove(id);
+      } else {
+        _savedSpotIds.add(id);
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
-    final size = MediaQuery.sizeOf(context);
+    final l = AppLocalizations.of(context);
+    final isEn = l != null;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: AppTheme.bgBase,
-      extendBodyBehindAppBar: true,
-      body: Stack(
-        children: [
-          // ── Subtle animated gradient bg ───────────────────────────────
-          AnimatedBuilder(
-            animation: _bgController,
-            builder: (_, __) {
-              final t = _bgController.value * 2 * pi;
-              return Stack(children: [
-                Positioned(
-                  left: size.width * 0.5 + cos(t * 0.4) * 80,
-                  top: -100 + sin(t * 0.4) * 40,
-                  child: Container(
-                    width: 400,
-                    height: 400,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: RadialGradient(colors: [
-                        AppTheme.cyan.withOpacity(0.08),
-                        Colors.transparent,
-                      ]),
-                    ),
-                  ),
-                ),
-                Positioned(
-                  right: -50 + cos(t * 0.3 + 1.2) * 60,
-                  bottom: size.height * 0.4 + sin(t * 0.3 + 1.2) * 40,
-                  child: Container(
-                    width: 300,
-                    height: 300,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: RadialGradient(colors: [
-                        AppTheme.violet.withOpacity(0.1),
-                        Colors.transparent,
-                      ]),
-                    ),
-                  ),
-                ),
-              ]);
-            },
-          ),
-
-          // ── Main scroll content ───────────────────────────────────────
-          CustomScrollView(
-            slivers: [
-              // ── App Bar ───────────────────────────────────────────────
-              SliverAppBar(
-                backgroundColor: Colors.transparent,
-                elevation: 0,
-                pinned: false,
-                floating: true,
-                toolbarHeight: 64,
-                flexibleSpace: SafeArea(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: Row(
-                      children: [
-                        // Logo
-                        Container(
-                          width: 36,
-                          height: 36,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(10),
-                            gradient: AppTheme.cyanGradient,
-                          ),
-                          child: const Icon(
-                            Icons.local_parking_rounded,
-                            color: AppTheme.bgBase,
-                            size: 20,
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Text(
-                          'ParkSync',
-                          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: -0.5,
-                              ),
-                        ),
-                        const Spacer(),
-                        // Language switcher
-                        _LanguagePill(),
-                        const SizedBox(width: 10),
-                        // Login CTA
-                        GestureDetector(
-                          onTap: () => context.push('/login'),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 8),
-                            decoration: BoxDecoration(
-                              color: AppTheme.cyan.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(
-                                  color: AppTheme.cyan.withOpacity(0.3)),
-                            ),
-                            child: Text(
-                              'Login',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .labelMedium
-                                  ?.copyWith(color: AppTheme.cyan),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      // ── Fixed Top AppBar: Stays at the top within safe phone metrics ────
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(68),
+        child: SafeArea(
+          bottom: false,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surface,
+              border: Border(
+                bottom: BorderSide(
+                  color: Theme.of(context).dividerTheme.color ?? const Color(0xFF1C2A42),
+                  width: 1,
                 ),
               ),
-
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // ── Hero heading ───────────────────────────────
-                      const SizedBox(height: 16),
-                      Text(
-                        l.findParkingNear,
-                        style: Theme.of(context).textTheme.displayLarge,
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Thousands of verified spots across India.',
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
-                      const SizedBox(height: 24),
-
-                      // ── Search bar ─────────────────────────────────
-                      _SearchBar(
-                        controller: _searchCtrl,
-                        hint: l.searchPlaceholder,
-                        onTap: () => context.push('/search', extra: _searchCtrl.text),
-                      ),
-
-                      const SizedBox(height: 32),
-
-                      // ── Quick filter chips ─────────────────────────
-                      _QuickFilters(),
-
-                      const SizedBox(height: 28),
-
-                      // ── Nearby spots heading ───────────────────────
-                      Row(
-                        children: [
-                          Text(
-                            l.nearbySpots,
-                            style: Theme.of(context).textTheme.displaySmall,
-                          ),
-                          const Spacer(),
-                          TextButton(
-                            onPressed: () => context.push('/search', extra: ''),
-                            child: const Text('See all'),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                    ],
+            ),
+            child: Row(
+              children: [
+                // ParkSync Logo badge
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(10),
+                    gradient: AppTheme.cyanGradient,
+                  ),
+                  child: const Icon(
+                    Icons.local_parking_rounded,
+                    color: Color(0xFF080B12),
+                    size: 20,
                   ),
                 ),
-              ),
+                const SizedBox(width: 10),
+                Text(
+                  'ParkSync',
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.5,
+                      ),
+                ),
+                const Spacer(),
 
-              // ── Parking listings ─────────────────────────────────────
-              SliverPadding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                sliver: SliverList.separated(
-                  itemCount: _mockListings.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 14),
-                  itemBuilder: (context, i) {
-                    final spot = _mockListings[i];
-                    return _ParkingCard(
-                      spot: spot,
-                      onTap: () => _onSpotTapped(context, spot['id']),
+                // Theme Mode Switcher (Dark / Light)
+                ValueListenableBuilder<ThemeMode>(
+                  valueListenable: appThemeMode,
+                  builder: (context, mode, _) {
+                    final isNight = mode == ThemeMode.dark;
+                    return IconButton(
+                      tooltip: isNight ? 'Switch to Bright Mode' : 'Switch to Night Mode',
+                      icon: Icon(
+                        isNight ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
+                        size: 20,
+                        color: isNight ? const Color(0xFFFFB800) : const Color(0xFF0284C7),
+                      ),
+                      onPressed: toggleThemeMode,
                     );
                   },
                 ),
-              ),
 
-              const SliverToBoxAdapter(child: SizedBox(height: 32)),
-
-              // ── "How it works" section ───────────────────────────────
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: _HowItWorksSection(),
+                // Language switcher pill
+                IconButton(
+                  tooltip: 'Change Language',
+                  icon: Icon(
+                    Icons.language_rounded,
+                    size: 20,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                  ),
+                  onPressed: () => _showLanguageModal(context),
                 ),
-              ),
 
-              const SliverToBoxAdapter(child: SizedBox(height: 80)),
-            ],
+                const SizedBox(width: 4),
+
+                // Login Button
+                GestureDetector(
+                  onTap: () => context.push('/login'),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                    decoration: BoxDecoration(
+                      color: AppTheme.cyan.withValues(alpha: isDark ? 0.12 : 0.2),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: AppTheme.cyan.withValues(alpha: isDark ? 0.3 : 0.6),
+                      ),
+                    ),
+                    child: Text(
+                      'Login',
+                      style: TextStyle(
+                        color: isDark ? AppTheme.cyan : AppTheme.cyanLight,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
+        ),
+      ),
+
+      // ── Functional Body: Switches between the 4 Bottom Tabs ──────────
+      body: IndexedStack(
+        index: _navIndex,
+        children: [
+          _buildExploreView(context, isEn, isDark),
+          _buildSavedView(context, isEn, isDark),
+          _buildBookingsView(context, isEn, isDark),
+          _buildProfileView(context, isEn, isDark),
         ],
       ),
 
-      // ── Bottom Nav ─────────────────────────────────────────────────────
+      // ── Functional Bottom Navigation Bar ──────────────────────────────
       bottomNavigationBar: NavigationBar(
         selectedIndex: _navIndex,
-        onDestinationSelected: (i) => setState(() => _navIndex = i),
+        onDestinationSelected: (index) {
+          setState(() => _navIndex = index);
+        },
         destinations: [
           NavigationDestination(
             icon: const Icon(Icons.explore_outlined),
             selectedIcon: const Icon(Icons.explore_rounded),
-            label: l.explore,
+            label: isEn ? l.explore : 'Explore',
           ),
           NavigationDestination(
             icon: const Icon(Icons.bookmark_outline_rounded),
             selectedIcon: const Icon(Icons.bookmark_rounded),
-            label: l.saved,
+            label: isEn ? l.saved : 'Saved',
           ),
           NavigationDestination(
             icon: const Icon(Icons.receipt_long_outlined),
             selectedIcon: const Icon(Icons.receipt_long_rounded),
-            label: l.bookings,
+            label: isEn ? l.bookings : 'Bookings',
           ),
           NavigationDestination(
             icon: const Icon(Icons.person_outline_rounded),
             selectedIcon: const Icon(Icons.person_rounded),
-            label: l.profile,
+            label: isEn ? l.profile : 'Profile',
           ),
         ],
       ),
     );
   }
 
-  void _onSpotTapped(BuildContext context, String id) {
-    // Guests can VIEW details — login prompted inside detail screen at booking
-    context.push('/parking-detail', extra: id);
-  }
-}
+  // ══════════════════════════════════════════════════════════════════════════
+  // TAB 0: EXPLORE VIEW
+  // ══════════════════════════════════════════════════════════════════════════
+  Widget _buildExploreView(BuildContext context, bool isEn, bool isDark) {
+    final l = AppLocalizations.of(context);
+    final spots = _filteredSpots;
 
-// ── Sub-widgets ──────────────────────────────────────────────────────────────
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(18, 16, 18, 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Headline
+          Text(
+            isEn ? l!.findParkingNear : 'Find parking\nnear you.',
+            style: Theme.of(context).textTheme.displayLarge,
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Verified parking bays across India with guaranteed spots.',
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+          const SizedBox(height: 18),
 
-class _SearchBar extends StatelessWidget {
-  final TextEditingController controller;
-  final String hint;
-  final VoidCallback onTap;
-
-  const _SearchBar({required this.controller, required this.hint, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-        decoration: BoxDecoration(
-          color: AppTheme.bgInput,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFF1C2A42)),
-          boxShadow: [
-            BoxShadow(
-              color: AppTheme.cyan.withOpacity(0.04),
-              blurRadius: 20,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Icon(Icons.search_rounded, color: AppTheme.cyan, size: 20),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                hint,
-                style: Theme.of(context)
-                    .textTheme
-                    .bodyMedium
-                    ?.copyWith(color: AppTheme.textMuted),
+          // ── Real Interactive Search Bar (Typing works directly) ────────
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+            decoration: BoxDecoration(
+              color: Theme.of(context).inputDecorationTheme.fillColor,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: Theme.of(context).dividerTheme.color ?? const Color(0xFF1C2A42),
               ),
-            ),
-            Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: AppTheme.cyan.withOpacity(0.12),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Icon(Icons.my_location_rounded,
-                  color: AppTheme.cyan, size: 16),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _QuickFilters extends StatefulWidget {
-  @override
-  State<_QuickFilters> createState() => _QuickFiltersState();
-}
-
-class _QuickFiltersState extends State<_QuickFilters> {
-  int _selected = 0;
-  final List<String> _filters = ['All', 'Covered', 'CCTV', 'Verified', 'Open Now'];
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 36,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: _filters.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 8),
-        itemBuilder: (context, i) {
-          final selected = i == _selected;
-          return GestureDetector(
-            onTap: () => setState(() => _selected = i),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: BoxDecoration(
-                color: selected
-                    ? AppTheme.cyan.withOpacity(0.15)
-                    : AppTheme.bgElevated,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: selected
-                      ? AppTheme.cyan.withOpacity(0.5)
-                      : const Color(0xFF1C2A42),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: isDark ? 0.15 : 0.04),
+                  blurRadius: 10,
+                  offset: const Offset(0, 3),
                 ),
-              ),
-              child: Text(
-                _filters[i],
-                style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                      color: selected ? AppTheme.cyan : AppTheme.textSecondary,
-                      fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                    ),
-              ),
+              ],
             ),
-          );
-        },
+            child: Row(
+              children: [
+                const Icon(Icons.search_rounded, color: AppTheme.cyan, size: 22),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: TextField(
+                    controller: _searchCtrl,
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w500,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                    decoration: InputDecoration(
+                      hintText: isEn ? l!.searchPlaceholder : 'Search destination or area...',
+                      hintStyle: TextStyle(
+                        color: Theme.of(context).colorScheme.outline,
+                        fontSize: 14,
+                      ),
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    onChanged: (val) {
+                      setState(() {}); // Live filter spots
+                    },
+                  ),
+                ),
+                if (_searchCtrl.text.isNotEmpty)
+                  IconButton(
+                    icon: const Icon(Icons.clear_rounded, size: 18),
+                    color: Theme.of(context).colorScheme.outline,
+                    onPressed: () {
+                      _searchCtrl.clear();
+                      setState(() {});
+                    },
+                  ),
+                // Open Map Button
+                InkWell(
+                  onTap: () => context.push('/search', extra: _searchCtrl.text),
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppTheme.cyan.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(
+                      Icons.map_rounded,
+                      color: AppTheme.cyan,
+                      size: 18,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 18),
+
+          // ── Working Filter Chips ───────────────────────────────────────
+          SizedBox(
+            height: 38,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              children: [
+                _buildFilterChip('All'),
+                _buildFilterChip('Covered'),
+                _buildFilterChip('CCTV'),
+                _buildFilterChip('Verified'),
+                _buildFilterChip('Under ₹40'),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 22),
+
+          // Header count
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Available Spots (${spots.length})',
+                style: Theme.of(context).textTheme.displaySmall?.copyWith(fontSize: 18),
+              ),
+              if (_selectedFilter != 'All' || _searchCtrl.text.isNotEmpty)
+                TextButton(
+                  onPressed: () {
+                    _searchCtrl.clear();
+                    setState(() => _selectedFilter = 'All');
+                  },
+                  child: const Text('Reset filters'),
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          // Listings or Empty State
+          if (spots.isEmpty)
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
+              alignment: Alignment.center,
+              child: Column(
+                children: [
+                  Icon(
+                    Icons.search_off_rounded,
+                    size: 48,
+                    color: Theme.of(context).colorScheme.outline,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'No spots match your search or filter.',
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                  ),
+                  const SizedBox(height: 6),
+                  TextButton(
+                    onPressed: () {
+                      _searchCtrl.clear();
+                      setState(() => _selectedFilter = 'All');
+                    },
+                    child: const Text('Clear Search & Show All'),
+                  ),
+                ],
+              ),
+            )
+          else
+            ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: spots.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 12),
+              itemBuilder: (context, i) {
+                final spot = spots[i];
+                final isSaved = _savedSpotIds.contains(spot['id']);
+                return _buildSpotCard(context, spot, isSaved);
+              },
+            ),
+
+          const SizedBox(height: 28),
+
+          // Informational "How It Works" Section
+          _buildHowItWorksCard(context),
+
+          const SizedBox(height: 20),
+        ],
       ),
     );
   }
-}
 
-class _ParkingCard extends StatelessWidget {
-  final Map<String, dynamic> spot;
-  final VoidCallback onTap;
+  Widget _buildFilterChip(String label) {
+    final isSelected = _selectedFilter == label;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-  const _ParkingCard({required this.spot, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final Color accentColor = spot['color'] as Color;
-
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          color: AppTheme.bgSurface,
+    return Padding(
+      padding: const EdgeInsets.only(right: 8.0),
+      child: FilterChip(
+        label: Text(label),
+        selected: isSelected,
+        onSelected: (val) {
+          setState(() {
+            _selectedFilter = label;
+          });
+        },
+        selectedColor: AppTheme.cyan.withValues(alpha: isDark ? 0.2 : 0.25),
+        checkmarkColor: isDark ? AppTheme.cyan : AppTheme.cyanLight,
+        labelStyle: TextStyle(
+          color: isSelected
+              ? (isDark ? AppTheme.cyan : AppTheme.cyanLight)
+              : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
+          fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+          fontSize: 12,
+        ),
+        shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: const Color(0xFF1C2A42)),
-          boxShadow: [
-            BoxShadow(
-              color: accentColor.withValues(alpha: 0.05),
-              blurRadius: 20,
-              offset: const Offset(0, 4),
-            ),
-          ],
+          side: BorderSide(
+            color: isSelected
+                ? AppTheme.cyan
+                : (Theme.of(context).dividerTheme.color ?? const Color(0xFF1C2A42)),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSpotCard(BuildContext context, Map<String, dynamic> spot, bool isSaved) {
+    final Color accent = spot['color'] as Color;
+
+    return InkWell(
+      onTap: () => context.push('/parking-detail', extra: spot['id']),
+      borderRadius: BorderRadius.circular(18),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: Theme.of(context).dividerTheme.color ?? const Color(0xFF1C2A42),
+          ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                // Icon badge
                 Container(
                   width: 44,
                   height: 44,
                   decoration: BoxDecoration(
-                    color: accentColor.withValues(alpha: 0.1),
+                    color: accent.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(Icons.local_parking_rounded,
-                      color: accentColor, size: 22),
+                  child: Icon(Icons.local_parking_rounded, color: accent, size: 22),
                 ),
-                const SizedBox(width: 14),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -491,48 +548,64 @@ class _ParkingCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        '${spot['distance']} km away • ${spot['spots']} spots left',
+                        '${spot['distance']} km away • ${spot['area']}',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: AppTheme.textSecondary,
+                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                             ),
                       ),
                     ],
                   ),
                 ),
-                // Rate
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      '₹${spot['rate']}/hr',
-                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                            color: accentColor,
-                            fontWeight: FontWeight.w800,
-                          ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'onwards',
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                  ],
+                // Bookmark button
+                IconButton(
+                  icon: Icon(
+                    isSaved ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
+                    color: isSaved ? AppTheme.cyan : Theme.of(context).colorScheme.outline,
+                    size: 22,
+                  ),
+                  onPressed: () => _toggleSaveSpot(spot['id']),
                 ),
               ],
             ),
-            const SizedBox(height: 14),
-            const Divider(height: 1, thickness: 1, color: Color(0xFF1C2A42)),
             const SizedBox(height: 12),
-            // Feature badges
-            Wrap(
-              spacing: 8,
-              runSpacing: 6,
+            const Divider(height: 1),
+            const SizedBox(height: 10),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                if (spot['covered'] == true)
-                  _Badge(label: 'Covered', color: AppTheme.cyan),
-                if (spot['cctv'] == true)
-                  _Badge(label: 'CCTV', color: AppTheme.violet),
-                if (spot['verified'] == true)
-                  _Badge(label: '✓ Verified', color: AppTheme.success),
+                Row(
+                  children: [
+                    if (spot['covered'] == true) _buildMiniTag('Covered', AppTheme.cyan),
+                    if (spot['cctv'] == true) ...[
+                      const SizedBox(width: 6),
+                      _buildMiniTag('CCTV', AppTheme.violet),
+                    ],
+                    if (spot['verified'] == true) ...[
+                      const SizedBox(width: 6),
+                      _buildMiniTag('Verified ✓', AppTheme.success),
+                    ],
+                  ],
+                ),
+                RichText(
+                  text: TextSpan(
+                    text: '₹${spot['rate']}',
+                    style: TextStyle(
+                      color: accent,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                    ),
+                    children: [
+                      TextSpan(
+                        text: '/hr',
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ),
           ],
@@ -540,163 +613,511 @@ class _ParkingCard extends StatelessWidget {
       ),
     );
   }
-}
 
-class _Badge extends StatelessWidget {
-  final String label;
-  final Color color;
-
-  const _Badge({required this.label, required this.color});
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildMiniTag(String text, Color color) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
+        color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: color.withValues(alpha: 0.25)),
       ),
       child: Text(
-        label,
-        style: TextStyle(
-          color: color,
-          fontSize: 11,
-          fontWeight: FontWeight.w600,
-        ),
+        text,
+        style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.w700),
       ),
     );
   }
-}
 
-class _HowItWorksSection extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Section divider
-        Container(height: 1, color: const Color(0xFF1C2A42)),
-        const SizedBox(height: 32),
-
-        Text(
-          'How it works',
-          style: Theme.of(context).textTheme.displaySmall,
-        ),
-        const SizedBox(height: 4),
-        Text(
-          'Two ways to use ParkSync.',
-          style: Theme.of(context).textTheme.bodyMedium,
-        ),
-        const SizedBox(height: 24),
-
-        // Driver card
-        _RoleInfoCard(
-          icon: Icons.directions_car_rounded,
-          iconColor: AppTheme.cyan,
-          title: 'For Drivers',
-          description:
-              'Browse thousands of verified parking spots across India. Book in seconds, park stress-free. Pay only for the time you use.',
-          ctaLabel: 'Explore Parking',
-          ctaColor: AppTheme.cyan,
-          onTap: () {},
-        ),
-
-        const SizedBox(height: 16),
-
-        // Provider card
-        _RoleInfoCard(
-          icon: Icons.storefront_rounded,
-          iconColor: AppTheme.violet,
-          title: 'For Providers',
-          description:
-              'Have an empty driveway or parking bay? List it on ParkSync and earn every hour it\'s used. Zero upfront cost.',
-          ctaLabel: 'List Your Space',
-          ctaColor: AppTheme.violet,
-          onTap: () => context.push('/provider-onboarding'),
-        ),
-      ],
-    );
-  }
-}
-
-class _RoleInfoCard extends StatelessWidget {
-  final IconData icon;
-  final Color iconColor;
-  final String title;
-  final String description;
-  final String ctaLabel;
-  final Color ctaColor;
-  final VoidCallback onTap;
-
-  const _RoleInfoCard({
-    required this.icon,
-    required this.iconColor,
-    required this.title,
-    required this.description,
-    required this.ctaLabel,
-    required this.ctaColor,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildHowItWorksCard(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: AppTheme.bgSurface,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFF1C2A42)),
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: Theme.of(context).dividerTheme.color ?? const Color(0xFF1C2A42),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: iconColor.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(icon, color: iconColor, size: 22),
-              ),
-              const SizedBox(width: 14),
+              const Icon(Icons.info_outline_rounded, color: AppTheme.cyan, size: 20),
+              const SizedBox(width: 8),
               Text(
-                title,
-                style: Theme.of(context).textTheme.headlineMedium,
+                'How ParkSync Works',
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize: 16),
               ),
             ],
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 10),
           Text(
-            description,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(height: 1.6),
+            'ParkSync enables drivers to pre-book verified parking slots in seconds, while empowering hosts to monetize unused space across India.',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(height: 1.5),
           ),
-          const SizedBox(height: 16),
-          GestureDetector(
-            onTap: onTap,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              decoration: BoxDecoration(
-                color: ctaColor.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: ctaColor.withValues(alpha: 0.3)),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => context.push('/role-selection'),
+                  style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(42)),
+                  child: const Text('Read Guide', style: TextStyle(fontSize: 13)),
+                ),
               ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    ctaLabel,
-                    style: TextStyle(
-                      color: ctaColor,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
+              const SizedBox(width: 10),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () => context.push('/provider-onboarding'),
+                  style: ElevatedButton.styleFrom(minimumSize: const Size.fromHeight(42)),
+                  child: const Text('List Space', style: TextStyle(fontSize: 13)),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // TAB 1: SAVED VIEW
+  // ══════════════════════════════════════════════════════════════════════════
+  Widget _buildSavedView(BuildContext context, bool isEn, bool isDark) {
+    final savedList = _allListings.where((s) => _savedSpotIds.contains(s['id'])).toList();
+
+    return Padding(
+      padding: const EdgeInsets.all(20.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Saved Parking', style: Theme.of(context).textTheme.displayMedium),
+          const SizedBox(height: 4),
+          Text(
+            'Your bookmarked parking spots for quick access.',
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+          const SizedBox(height: 20),
+          if (savedList.isEmpty)
+            Expanded(
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.bookmark_outline_rounded,
+                      size: 64,
+                      color: Theme.of(context).colorScheme.outline,
                     ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'No saved spots yet',
+                      style: Theme.of(context).textTheme.headlineMedium,
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Tap the bookmark icon on any parking spot to save it.',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 20),
+                    ElevatedButton(
+                      onPressed: () => setState(() => _navIndex = 0),
+                      style: ElevatedButton.styleFrom(minimumSize: const Size(180, 48)),
+                      child: const Text('Explore Spots'),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else
+            Expanded(
+              child: ListView.separated(
+                itemCount: savedList.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 12),
+                itemBuilder: (context, i) {
+                  return _buildSpotCard(context, savedList[i], true);
+                },
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // TAB 2: BOOKINGS VIEW
+  // ══════════════════════════════════════════════════════════════════════════
+  Widget _buildBookingsView(BuildContext context, bool isEn, bool isDark) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('My Bookings', style: Theme.of(context).textTheme.displayMedium),
+          const SizedBox(height: 4),
+          Text(
+            'Active reservations and past parking history.',
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+          const SizedBox(height: 20),
+
+          // Active Booking Card
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF00D4FF), Color(0xFF0284C7)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: AppTheme.cyan.withValues(alpha: 0.25),
+                  blurRadius: 18,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(Icons.circle, size: 8, color: Colors.black),
+                          SizedBox(width: 6),
+                          Text(
+                            'ACTIVE SESSION',
+                            style: TextStyle(
+                              color: Colors.black,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 11,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Text(
+                      'Bay A4',
+                      style: TextStyle(
+                        color: Colors.black,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                const Text(
+                  'Metro Grand Parking Bay',
+                  style: TextStyle(
+                    color: Colors.black,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 20,
                   ),
-                  const SizedBox(width: 6),
-                  Icon(Icons.arrow_forward_rounded, color: ctaColor, size: 14),
-                ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Valid Today • 10:00 AM - 12:00 PM (2 hrs)',
+                  style: TextStyle(
+                    color: Colors.black.withValues(alpha: 0.75),
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                  ),
+                ),
+                const SizedBox(height: 18),
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        icon: const Icon(Icons.camera_alt_outlined, size: 16),
+                        label: const Text('Capture Photo', style: TextStyle(fontSize: 13)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.black,
+                          foregroundColor: Colors.white,
+                          minimumSize: const Size.fromHeight(44),
+                        ),
+                        onPressed: () {
+                          context.push(
+                            '/capture-evidence',
+                            extra: {'bookingId': 'bk_live_01', 'type': 'BEFORE'},
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        icon: const Icon(Icons.navigation_outlined, size: 16),
+                        label: const Text('Navigate', style: TextStyle(fontSize: 13)),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.black,
+                          side: const BorderSide(color: Colors.black, width: 1.5),
+                          minimumSize: const Size.fromHeight(44),
+                        ),
+                        onPressed: () {
+                          context.push('/search', extra: 'Metro Grand Parking Bay');
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 28),
+
+          Text(
+            'Past Completed Bookings',
+            style: Theme.of(context).textTheme.displaySmall?.copyWith(fontSize: 18),
+          ),
+          const SizedBox(height: 14),
+
+          _buildPastBookingCard(
+            context,
+            name: 'Central Commercial Plaza',
+            date: 'Yesterday, 02:30 PM - 04:30 PM',
+            rate: '₹80.00',
+            ref: 'PS-8921',
+          ),
+          const SizedBox(height: 10),
+          _buildPastBookingCard(
+            context,
+            name: 'Station Road Secure Bay',
+            date: '12 Oct 2026, 09:00 AM - 11:00 AM',
+            rate: '₹50.00',
+            ref: 'PS-7740',
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPastBookingCard(
+    BuildContext context, {
+    required String name,
+    required String date,
+    required String rate,
+    required String ref,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: Theme.of(context).dividerTheme.color ?? const Color(0xFF1C2A42),
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: AppTheme.success.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(Icons.check_circle_rounded, color: AppTheme.success, size: 20),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  name,
+                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  date,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.outline,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                rate,
+                style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                ref,
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.outline,
+                  fontSize: 11,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // TAB 3: PROFILE VIEW
+  // ══════════════════════════════════════════════════════════════════════════
+  Widget _buildProfileView(BuildContext context, bool isEn, bool isDark) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // User Card
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surface,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: Theme.of(context).dividerTheme.color ?? const Color(0xFF1C2A42),
+              ),
+            ),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 30,
+                  backgroundColor: AppTheme.cyan.withValues(alpha: 0.15),
+                  child: const Icon(Icons.person_rounded, size: 36, color: AppTheme.cyan),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Guest User',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Login to sync vehicles & bookings',
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.outline,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed: () => context.push('/login'),
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: const Size(70, 36),
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                  ),
+                  child: const Text('Login', style: TextStyle(fontSize: 12)),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 24),
+
+          Text(
+            'Settings & Preferences',
+            style: Theme.of(context).textTheme.displaySmall?.copyWith(fontSize: 18),
+          ),
+          const SizedBox(height: 12),
+
+          // Theme Mode Switch Tile
+          ValueListenableBuilder<ThemeMode>(
+            valueListenable: appThemeMode,
+            builder: (context, mode, _) {
+              final isNight = mode == ThemeMode.dark;
+              return ListTile(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                tileColor: Theme.of(context).colorScheme.surface,
+                leading: Icon(
+                  isNight ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
+                  color: isNight ? const Color(0xFFFFB800) : const Color(0xFF0284C7),
+                ),
+                title: const Text('Theme Mode', style: TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: Text(isNight ? 'Night Mode (Active)' : 'Bright Mode (Active)'),
+                trailing: Switch(
+                  value: isNight,
+                  onChanged: (val) => toggleThemeMode(),
+                ),
+              );
+            },
+          ),
+
+          const SizedBox(height: 10),
+
+          // Language Tile
+          ListTile(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            tileColor: Theme.of(context).colorScheme.surface,
+            leading: const Icon(Icons.language_rounded, color: AppTheme.cyan),
+            title: const Text('App Language', style: TextStyle(fontWeight: FontWeight.w600)),
+            subtitle: Text(
+              appLocale.value.languageCode == 'mr'
+                  ? 'मराठी (Marathi)'
+                  : (appLocale.value.languageCode == 'hi' ? 'हिंदी (Hindi)' : 'English'),
+            ),
+            trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14),
+            onTap: () => _showLanguageModal(context),
+          ),
+
+          const SizedBox(height: 10),
+
+          // My Vehicles Tile
+          ListTile(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            tileColor: Theme.of(context).colorScheme.surface,
+            leading: const Icon(Icons.directions_car_rounded, color: AppTheme.violet),
+            title: const Text('My Vehicles', style: TextStyle(fontWeight: FontWeight.w600)),
+            subtitle: const Text('Register vehicle dimensions for bay fitting'),
+            trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14),
+            onTap: () => context.push('/add-vehicle'),
+          ),
+
+          const SizedBox(height: 24),
+
+          Text(
+            'Partner with ParkSync',
+            style: Theme.of(context).textTheme.displaySmall?.copyWith(fontSize: 18),
+          ),
+          const SizedBox(height: 12),
+
+          // Host Onboarding Tile
+          ListTile(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            tileColor: Theme.of(context).colorScheme.surface,
+            leading: const Icon(Icons.storefront_rounded, color: AppTheme.success),
+            title: const Text('Become a Parking Host', style: TextStyle(fontWeight: FontWeight.w600)),
+            subtitle: const Text('List driveways, lots, or commercial bays'),
+            trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14),
+            onTap: () => context.push('/provider-onboarding'),
+          ),
+
+          const SizedBox(height: 24),
+          Center(
+            child: Text(
+              'ParkSync India • v1.0.0 (Enterprise Build)',
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.outline,
+                fontSize: 12,
               ),
             ),
           ),
@@ -704,85 +1125,66 @@ class _RoleInfoCard extends StatelessWidget {
       ),
     );
   }
-}
 
-// ── Language pill widget ───────────────────────────────────────────────────
-
-class _LanguagePill extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => _showLanguageSheet(context),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(
-          color: AppTheme.bgElevated,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: const Color(0xFF1C2A42)),
-        ),
-        child: const Icon(Icons.language_rounded,
-            color: AppTheme.textSecondary, size: 18),
-      ),
-    );
-  }
-
-  void _showLanguageSheet(BuildContext context) {
+  void _showLanguageModal(BuildContext context) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppTheme.bgSurface,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (_) => const _LanguageSheet(),
-    );
-  }
-}
-
-class _LanguageSheet extends StatelessWidget {
-  const _LanguageSheet();
-
-  @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
-    final langs = [
-      ('English', const Locale('en'), '🇬🇧'),
-      (l.marathi, const Locale('mr'), '🇮🇳'),
-      (l.hindi, const Locale('hi'), '🇮🇳'),
-    ];
-
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(l.language, style: Theme.of(context).textTheme.displaySmall),
-          const SizedBox(height: 20),
-          ...langs.map((lang) {
-            return ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: Text(lang.$3, style: const TextStyle(fontSize: 24)),
-              title: Text(lang.$1,
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      fontWeight: FontWeight.w600)),
-              trailing: ValueListenableBuilder<Locale>(
-                valueListenable: appLocale,
-                builder: (_, current, __) {
-                  return current == lang.$2
-                      ? const Icon(Icons.check_circle_rounded,
-                          color: AppTheme.cyan)
-                      : const SizedBox.shrink();
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Choose Language / भाषा निवडा',
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+              const SizedBox(height: 18),
+              ListTile(
+                leading: const Text('🇬🇧', style: TextStyle(fontSize: 22)),
+                title: const Text('English'),
+                trailing: appLocale.value.languageCode == 'en'
+                    ? const Icon(Icons.check_circle_rounded, color: AppTheme.cyan)
+                    : null,
+                onTap: () {
+                  appLocale.value = const Locale('en');
+                  Navigator.pop(context);
                 },
               ),
-              onTap: () {
-                appLocale.value = lang.$2;
-                Navigator.pop(context);
-              },
-            );
-          }),
-          const SizedBox(height: 8),
-        ],
-      ),
+              ListTile(
+                leading: const Text('🇮🇳', style: TextStyle(fontSize: 22)),
+                title: const Text('मराठी (Marathi)'),
+                trailing: appLocale.value.languageCode == 'mr'
+                    ? const Icon(Icons.check_circle_rounded, color: AppTheme.cyan)
+                    : null,
+                onTap: () {
+                  appLocale.value = const Locale('mr');
+                  Navigator.pop(context);
+                },
+              ),
+              ListTile(
+                leading: const Text('🇮🇳', style: TextStyle(fontSize: 22)),
+                title: const Text('हिंदी (Hindi)'),
+                trailing: appLocale.value.languageCode == 'hi'
+                    ? const Icon(Icons.check_circle_rounded, color: AppTheme.cyan)
+                    : null,
+                onTap: () {
+                  appLocale.value = const Locale('hi');
+                  Navigator.pop(context);
+                },
+              ),
+              const SizedBox(height: 12),
+            ],
+          ),
+        );
+      },
     );
   }
 }

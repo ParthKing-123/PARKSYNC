@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:parksync/l10n/app_localizations.dart';
 import 'core/locale_provider.dart';
+import 'core/theme_provider.dart';
 import 'shared/theme/app_theme.dart';
 import 'core/router.dart';
 
@@ -15,26 +16,33 @@ class ParkSyncApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<Locale>(
-      valueListenable: appLocale,
-      builder: (context, locale, _) {
-        return MaterialApp.router(
-          title: 'ParkSync',
-          theme: AppTheme.darkTheme,
-          locale: locale,
-          supportedLocales: const [
-            Locale('en'),
-            Locale('mr'),
-            Locale('hi'),
-          ],
-          localizationsDelegates: const [
-            AppLocalizations.delegate,
-            GlobalMaterialLocalizations.delegate,
-            GlobalWidgetsLocalizations.delegate,
-            GlobalCupertinoLocalizations.delegate,
-          ],
-          routerConfig: appRouter,
-          debugShowCheckedModeBanner: false,
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: appThemeMode,
+      builder: (context, themeMode, _) {
+        return ValueListenableBuilder<Locale>(
+          valueListenable: appLocale,
+          builder: (context, locale, _) {
+            return MaterialApp.router(
+              title: 'ParkSync',
+              theme: AppTheme.lightTheme,
+              darkTheme: AppTheme.darkTheme,
+              themeMode: themeMode,
+              locale: locale,
+              supportedLocales: const [
+                Locale('en'),
+                Locale('mr'),
+                Locale('hi'),
+              ],
+              localizationsDelegates: const [
+                AppLocalizations.delegate,
+                GlobalMaterialLocalizations.delegate,
+                GlobalWidgetsLocalizations.delegate,
+                GlobalCupertinoLocalizations.delegate,
+              ],
+              routerConfig: appRouter,
+              debugShowCheckedModeBanner: false,
+            );
+          },
         );
       },
     );

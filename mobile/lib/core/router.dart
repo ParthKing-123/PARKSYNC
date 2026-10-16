@@ -1,5 +1,4 @@
 import 'package:go_router/go_router.dart';
-import 'package:flutter/material.dart';
 
 import '../features/home/presentation/guest_home_screen.dart';
 import '../features/home/presentation/home_screen.dart';
@@ -82,7 +81,7 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/booking-checkout',
       builder: (context, state) =>
-          BookingCheckoutScreen(parkingId: state.extra as String? ?? ''),
+          BookingCheckoutScreen(bookingData: state.extra),
     ),
     GoRoute(
       path: '/booking-confirmation',
