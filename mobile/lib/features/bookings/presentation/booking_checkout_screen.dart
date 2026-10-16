@@ -37,7 +37,7 @@ class _BookingCheckoutScreenState extends State<BookingCheckoutScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Baner Premium Parking', style: Theme.of(context).textTheme.displayMedium?.copyWith(fontSize: 20)),
+              Text('Metro Grand Parking Bay', style: Theme.of(context).textTheme.displayMedium?.copyWith(fontSize: 20)),
               const SizedBox(height: 8),
               Text('Today, 10:00 AM - 12:00 PM (2 Hours)', style: Theme.of(context).textTheme.bodyMedium),
               
@@ -49,7 +49,7 @@ class _BookingCheckoutScreenState extends State<BookingCheckoutScreen> {
                 decoration: BoxDecoration(
                   color: Theme.of(context).colorScheme.surface,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Theme.of(context).colorScheme.primary.withOpacity(0.2)),
+                  border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2)),
                 ),
                 child: Column(
                   children: [

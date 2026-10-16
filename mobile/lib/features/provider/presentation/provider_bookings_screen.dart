@@ -48,7 +48,7 @@ class ProviderBookingsScreen extends StatelessWidget {
                     ],
                   ),
                   const Divider(height: 24),
-                  Text('Baner Premium Parking', style: Theme.of(context).textTheme.bodyLarge),
+                  Text('Metro Grand Parking Bay', style: Theme.of(context).textTheme.bodyLarge),
                   const SizedBox(height: 8),
                   Text('Today, 10:00 AM - 12:00 PM', style: Theme.of(context).textTheme.bodyMedium),
                   const SizedBox(height: 16),
@@ -56,7 +56,7 @@ class ProviderBookingsScreen extends StatelessWidget {
                     children: [
                       const Icon(Icons.directions_car, size: 20, color: Colors.grey),
                       const SizedBox(width: 8),
-                      Text('Hyundai Creta • MH 12 AB 1234', style: Theme.of(context).textTheme.bodyMedium),
+                      Text('Hyundai Creta • DL 01 AB 1234', style: Theme.of(context).textTheme.bodyMedium),
                     ],
                   ),
                   const SizedBox(height: 16),

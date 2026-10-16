@@ -140,7 +140,7 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
                 textCapitalization: TextCapitalization.characters,
                 decoration: const InputDecoration(
                   labelText: 'Registration Number',
-                  hintText: 'MH 12 AB 1234',
+                  hintText: 'e.g. DL 01 AB 1234',
                 ),
               ),
               

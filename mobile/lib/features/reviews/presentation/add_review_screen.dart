@@ -40,7 +40,7 @@ class _AddReviewScreenState extends State<AddReviewScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('How was the Baner Premium Parking space?', style: Theme.of(context).textTheme.displayMedium?.copyWith(fontSize: 24)),
+              Text('How was your parking experience?', style: Theme.of(context).textTheme.displayMedium?.copyWith(fontSize: 24)),
               const SizedBox(height: 32),
               
               Row(

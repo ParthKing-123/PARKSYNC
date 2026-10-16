@@ -1,7 +1,7 @@
 import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';
 
-// Placeholder screens
+import '../features/home/presentation/guest_home_screen.dart';
 import '../features/home/presentation/home_screen.dart';
 import '../features/onboarding/presentation/splash_screen.dart';
 import '../features/onboarding/presentation/role_selection_screen.dart';
@@ -25,57 +25,72 @@ final appRouter = GoRouter(
       path: '/',
       builder: (context, state) => const SplashScreen(),
     ),
+    // ── Guest entry point (no auth required) ──────────────────────────
     GoRoute(
-      path: '/role-selection',
-      builder: (context, state) => const RoleSelectionScreen(),
+      path: '/guest-home',
+      builder: (context, state) => const GuestHomeScreen(),
     ),
-    GoRoute(
-      path: '/provider-onboarding',
-      builder: (context, state) => const ProviderOnboardingScreen(),
-    ),
-    GoRoute(
-      path: '/add-parking',
-      builder: (context, state) => AddParkingScreen(providerType: state.extra as String? ?? 'OTHER'),
-    ),
-    GoRoute(
-      path: '/provider-home',
-      builder: (context, state) => const ProviderHomeScreen(),
-    ),
+    // ── Auth flow ─────────────────────────────────────────────────────
     GoRoute(
       path: '/login',
       builder: (context, state) => const LoginScreen(),
     ),
     GoRoute(
       path: '/verify-otp',
-      builder: (context, state) => VerifyOtpScreen(phoneNumber: state.extra as String? ?? ''),
+      builder: (context, state) =>
+          VerifyOtpScreen(phoneNumber: state.extra as String? ?? ''),
     ),
+    // ── Logged-in home ────────────────────────────────────────────────
+    GoRoute(
+      path: '/home',
+      builder: (context, state) => const HomeScreen(),
+    ),
+    // ── Onboarding / role info (informational only) ───────────────────
+    GoRoute(
+      path: '/role-selection',
+      builder: (context, state) => const RoleSelectionScreen(),
+    ),
+    // ── Provider flow ─────────────────────────────────────────────────
+    GoRoute(
+      path: '/provider-onboarding',
+      builder: (context, state) => const ProviderOnboardingScreen(),
+    ),
+    GoRoute(
+      path: '/add-parking',
+      builder: (context, state) =>
+          AddParkingScreen(providerType: state.extra as String? ?? 'OTHER'),
+    ),
+    GoRoute(
+      path: '/provider-home',
+      builder: (context, state) => const ProviderHomeScreen(),
+    ),
+    // ── Core driver flow ──────────────────────────────────────────────
     GoRoute(
       path: '/add-vehicle',
       builder: (context, state) => const AddVehicleScreen(),
     ),
     GoRoute(
-      path: '/home',
-      builder: (context, state) => const HomeScreen(),
-    ),
-    GoRoute(
       path: '/search',
-      builder: (context, state) => SearchScreen(destination: state.extra as String? ?? ''),
+      builder: (context, state) =>
+          SearchScreen(destination: state.extra as String? ?? ''),
     ),
     GoRoute(
       path: '/parking-detail',
-      builder: (context, state) => ParkingDetailScreen(parkingId: state.extra as String? ?? ''),
+      builder: (context, state) =>
+          ParkingDetailScreen(parkingId: state.extra as String? ?? ''),
     ),
     GoRoute(
       path: '/booking-checkout',
-      builder: (context, state) => BookingCheckoutScreen(parkingId: state.extra as String? ?? ''),
+      builder: (context, state) =>
+          BookingCheckoutScreen(parkingId: state.extra as String? ?? ''),
     ),
     GoRoute(
       path: '/booking-confirmation',
-      builder: (context, state) => BookingConfirmationScreen(bookingRef: state.extra as String? ?? ''),
+      builder: (context, state) => BookingConfirmationScreen(
+          bookingRef: state.extra as String? ?? ''),
     ),
     GoRoute(
       path: '/capture-evidence',
-      // extra should be a Map like {'bookingId': '123', 'type': 'BEFORE'}
       builder: (context, state) {
         final args = state.extra as Map<String, dynamic>? ?? {};
         return CaptureEvidenceScreen(
@@ -86,7 +101,8 @@ final appRouter = GoRouter(
     ),
     GoRoute(
       path: '/add-review',
-      builder: (context, state) => AddReviewScreen(bookingId: state.extra as String? ?? ''),
+      builder: (context, state) =>
+          AddReviewScreen(bookingId: state.extra as String? ?? ''),
     ),
   ],
 );

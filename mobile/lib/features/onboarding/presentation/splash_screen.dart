@@ -59,7 +59,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
 
     _mainController.forward().then((_) {
       Future.delayed(const Duration(milliseconds: 500), () {
-        if (mounted) context.go('/role-selection');
+        if (mounted) context.go('/guest-home');
       });
     });
   }

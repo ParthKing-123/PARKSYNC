@@ -1,7 +1,10 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'dart:ui';
+import '../../shared/theme/app_theme.dart';
 
+/// Premium animated gradient background — used on auth / onboarding screens.
+/// Features 3 slow-moving orbs with glassmorphism blur.
 class AnimatedFloatingBackground extends StatefulWidget {
   final Widget child;
 
@@ -11,7 +14,8 @@ class AnimatedFloatingBackground extends StatefulWidget {
   State<AnimatedFloatingBackground> createState() => _AnimatedFloatingBackgroundState();
 }
 
-class _AnimatedFloatingBackgroundState extends State<AnimatedFloatingBackground> with SingleTickerProviderStateMixin {
+class _AnimatedFloatingBackgroundState extends State<AnimatedFloatingBackground>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
 
   @override
@@ -19,7 +23,7 @@ class _AnimatedFloatingBackgroundState extends State<AnimatedFloatingBackground>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 20),
+      duration: const Duration(seconds: 18),
     )..repeat();
   }
 
@@ -33,62 +37,81 @@ class _AnimatedFloatingBackgroundState extends State<AnimatedFloatingBackground>
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        // Background color
-        Container(color: Theme.of(context).colorScheme.background),
-        
-        // Animated floating orbs
+        // Base background
+        Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFF0A0F1E), Color(0xFF060910)],
+            ),
+          ),
+        ),
+
+        // Animated orbs
         AnimatedBuilder(
           animation: _controller,
-          builder: (context, child) {
+          builder: (context, _) {
             final t = _controller.value * 2 * pi;
-            final size = MediaQuery.of(context).size;
-            
+            final size = MediaQuery.sizeOf(context);
+
             return Stack(
               children: [
-                // Orb 1 (Cyan/Primary)
+                // Orb 1 – cyan, large, top area
                 Positioned(
-                  left: (size.width / 2) + cos(t) * 150 - 100,
-                  top: (size.height / 3) + sin(t) * 150 - 100,
-                  child: _buildOrb(Theme.of(context).colorScheme.primary, 250),
+                  left: size.width * 0.15 + cos(t * 0.7) * 60,
+                  top: size.height * 0.05 + sin(t * 0.7) * 80,
+                  child: _Orb(color: AppTheme.cyan, diameter: 280, opacity: 0.12),
                 ),
-                // Orb 2 (Yellow/Secondary)
+                // Orb 2 – violet, mid-right
                 Positioned(
-                  right: (size.width / 2) + sin(t + pi) * 100 - 100,
-                  bottom: (size.height / 3) + cos(t + pi) * 100 - 100,
-                  child: _buildOrb(Theme.of(context).colorScheme.secondary, 200),
+                  right: size.width * 0.05 + sin(t * 0.5 + 1.2) * 50,
+                  top: size.height * 0.35 + cos(t * 0.5 + 1.2) * 70,
+                  child: _Orb(color: AppTheme.violet, diameter: 240, opacity: 0.14),
                 ),
-                // Orb 3 (Accent)
+                // Orb 3 – cyan tiny, bottom-left
                 Positioned(
-                  left: (size.width / 4) + cos(t + pi / 2) * 80 - 100,
-                  bottom: (size.height / 5) + sin(t + pi / 2) * 80 - 100,
-                  child: _buildOrb(Theme.of(context).colorScheme.primary.withOpacity(0.5), 150),
+                  left: size.width * 0.05 + cos(t * 0.4 + 2.4) * 40,
+                  bottom: size.height * 0.1 + sin(t * 0.4 + 2.4) * 60,
+                  child: _Orb(color: AppTheme.cyan, diameter: 160, opacity: 0.08),
                 ),
               ],
             );
           },
         ),
 
-        // Blur overlay (Glassmorphism effect over the orbs)
+        // Glassmorphism blur
         Positioned.fill(
           child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 80, sigmaY: 80),
-            child: Container(color: Colors.transparent),
+            filter: ImageFilter.blur(sigmaX: 70, sigmaY: 70),
+            child: const SizedBox.expand(),
           ),
         ),
 
-        // Foreground content
+        // Content
         Positioned.fill(child: widget.child),
       ],
     );
   }
+}
 
-  Widget _buildOrb(Color color, double size) {
+class _Orb extends StatelessWidget {
+  final Color color;
+  final double diameter;
+  final double opacity;
+
+  const _Orb({required this.color, required this.diameter, required this.opacity});
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
-      width: size,
-      height: size,
+      width: diameter,
+      height: diameter,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: color.withOpacity(0.4),
+        gradient: RadialGradient(
+          colors: [color.withOpacity(opacity * 1.8), color.withOpacity(0)],
+        ),
       ),
     );
   }

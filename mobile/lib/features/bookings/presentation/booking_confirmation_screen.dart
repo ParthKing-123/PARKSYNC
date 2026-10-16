@@ -18,7 +18,7 @@ class BookingConfirmationScreen extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(Icons.check_circle, size: 64, color: Theme.of(context).colorScheme.primary),
@@ -30,7 +30,7 @@ class BookingConfirmationScreen extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                'Baner Premium Parking • $bookingRef',
+                'Metro Grand Parking Bay • $bookingRef',
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
               

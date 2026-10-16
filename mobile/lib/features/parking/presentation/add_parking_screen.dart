@@ -78,8 +78,8 @@ class _AddParkingScreenState extends State<AddParkingScreen> {
             title: const Text('Location'),
             content: const TextField(
               decoration: InputDecoration(
-                labelText: 'Search Address (Pune)',
-                hintText: 'e.g. Baner, Pune',
+                labelText: 'Search Address / PIN Code (India)',
+                hintText: 'e.g. Area, City or 6-digit PIN code',
                 prefixIcon: Icon(Icons.location_on_outlined),
               ),
             ),

@@ -24,8 +24,8 @@ class _ProviderHomeScreenState extends State<ProviderHomeScreen> {
     return Scaffold(
       body: _pages[_currentIndex],
       bottomNavigationBar: NavigationBar(
-        backgroundColor: Theme.of(context).colorScheme.background,
-        indicatorColor: Theme.of(context).colorScheme.primary.withOpacity(0.2),
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        indicatorColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
         selectedIndex: _currentIndex,
         onDestinationSelected: (index) {
           setState(() {
@@ -141,7 +141,7 @@ class _ProviderDashboardView extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Baner Office Parking', style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold)),
+                            Text('Central Commercial Parking', style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold)),
                             const SizedBox(height: 4),
                             const Text('₹40/hr • 10 Spaces'),
                           ],
