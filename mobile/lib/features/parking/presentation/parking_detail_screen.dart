@@ -917,52 +917,165 @@ class _ParkingDetailScreenState extends State<ParkingDetailScreen> {
 
                   const SizedBox(height: 22),
 
-                  Text(
-                    isEn ? l.providerInfo : 'Provider Info',
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Host & Owner Information',
+                        style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize: 16),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: AppTheme.success.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: AppTheme.success.withValues(alpha: 0.3)),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.verified_rounded, size: 12, color: AppTheme.success),
+                            SizedBox(width: 4),
+                            Text(
+                              'Verified by Platform ✓',
+                              style: TextStyle(
+                                color: AppTheme.success,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 12),
 
                   Container(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(18),
                     decoration: BoxDecoration(
                       color: Theme.of(context).colorScheme.surface,
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(18),
                       border: Border.all(
                         color: Theme.of(context).dividerTheme.color ?? const Color(0xFF1C2A42),
                       ),
                     ),
-                    child: Row(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        CircleAvatar(
-                          radius: 22,
-                          backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-                          child: const Icon(Icons.business_rounded, color: AppTheme.cyan, size: 22),
+                        Row(
+                          children: [
+                            CircleAvatar(
+                              radius: 26,
+                              backgroundColor: AppTheme.cyan.withValues(alpha: 0.15),
+                              child: const Icon(Icons.person_rounded, size: 30, color: AppTheme.cyan),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'Rajesh Sharma',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'Commercial Space Manager • Metro Infra Group',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Theme.of(context).colorScheme.outline,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFFB800).withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.star_rounded, size: 14, color: Color(0xFFFFB800)),
+                                  SizedBox(width: 2),
+                                  Text(
+                                    '4.9',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 12,
+                                      color: Color(0xFFFFB800),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                isEn ? l.verifiedOfficeBldg : 'Verified Commercial Partner',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 15,
+                        const SizedBox(height: 16),
+                        const Divider(height: 1),
+                        const SizedBox(height: 14),
+
+                        // Host Gmail & Contact details
+                        Row(
+                          children: [
+                            const Icon(Icons.email_outlined, size: 16, color: AppTheme.cyan),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                'rajesh.sharma.parking@gmail.com',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 13,
+                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.85),
                                 ),
                               ),
-                              const SizedBox(height: 3),
-                              Text(
-                                isEn ? l.businessVerified : 'Business Verified • Safety Inspected',
+                            ),
+                            const Text(
+                              'Verified Gmail ✓',
+                              style: TextStyle(color: AppTheme.success, fontSize: 11, fontWeight: FontWeight.w600),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            const Icon(Icons.phone_outlined, size: 16, color: AppTheme.cyan),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                '+91 98230 ••••• (Verified Phone)',
                                 style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 13,
+                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.85),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            const Icon(Icons.shield_outlined, size: 16, color: AppTheme.success),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                'Physical Site Inspected & Approved by ParkSync',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
                                   fontSize: 12,
                                   color: Theme.of(context).colorScheme.outline,
                                 ),
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
-                        const Icon(Icons.verified_rounded, color: AppTheme.cyan, size: 20),
                       ],
                     ),
                   ),

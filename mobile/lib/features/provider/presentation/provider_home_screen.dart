@@ -85,14 +85,14 @@ class _ProviderDashboardView extends StatelessWidget {
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      Theme.of(context).colorScheme.primary.withOpacity(0.2),
+                      Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
                       Theme.of(context).colorScheme.surface,
                     ],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Theme.of(context).colorScheme.primary.withOpacity(0.5)),
+                  border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -131,7 +131,7 @@ class _ProviderDashboardView extends StatelessWidget {
                         width: 60,
                         height: 60,
                         decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.05),
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.05),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: const Icon(Icons.local_parking),
@@ -150,7 +150,7 @@ class _ProviderDashboardView extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.error.withOpacity(0.2),
+                          color: Theme.of(context).colorScheme.error.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: Text(

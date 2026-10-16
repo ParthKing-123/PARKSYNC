@@ -76,7 +76,7 @@ class _CarLoadingIndicatorState extends State<CarLoadingIndicator> with TickerPr
                   size: Size(widget.size * 1.5, 4),
                   painter: _RoadPainter(
                     progress: _roadController.value,
-                    color: themeColor.withOpacity(0.5),
+                    color: themeColor.withValues(alpha: 0.5),
                   ),
                 );
               },

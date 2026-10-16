@@ -62,7 +62,7 @@ class _CaptureEvidenceScreenState extends State<CaptureEvidenceScreen> {
                     decoration: BoxDecoration(
                       color: Theme.of(context).colorScheme.surface,
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Theme.of(context).colorScheme.primary.withOpacity(0.3)),
+                      border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3)),
                       image: _isCaptured ? const DecorationImage(
                         image: NetworkImage('https://via.placeholder.com/400x600/141416/00FF87?text=Photo+Captured'),
                         fit: BoxFit.cover,
@@ -73,7 +73,7 @@ class _CaptureEvidenceScreenState extends State<CaptureEvidenceScreen> {
                             child: Column(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(Icons.camera_alt, size: 64, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5)),
+                                Icon(Icons.camera_alt, size: 64, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5)),
                                 const SizedBox(height: 16),
                                 const Text('Tap to open camera'),
                               ],

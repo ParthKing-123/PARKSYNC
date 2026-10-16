@@ -61,19 +61,19 @@ class _AnimatedFloatingBackgroundState extends State<AnimatedFloatingBackground>
                 Positioned(
                   left: size.width * 0.15 + cos(t * 0.7) * 60,
                   top: size.height * 0.05 + sin(t * 0.7) * 80,
-                  child: _Orb(color: AppTheme.cyan, diameter: 280, opacity: 0.12),
+                  child: const _Orb(color: AppTheme.cyan, diameter: 280, opacity: 0.12),
                 ),
                 // Orb 2 – violet, mid-right
                 Positioned(
                   right: size.width * 0.05 + sin(t * 0.5 + 1.2) * 50,
                   top: size.height * 0.35 + cos(t * 0.5 + 1.2) * 70,
-                  child: _Orb(color: AppTheme.violet, diameter: 240, opacity: 0.14),
+                  child: const _Orb(color: AppTheme.violet, diameter: 240, opacity: 0.14),
                 ),
                 // Orb 3 – cyan tiny, bottom-left
                 Positioned(
                   left: size.width * 0.05 + cos(t * 0.4 + 2.4) * 40,
                   bottom: size.height * 0.1 + sin(t * 0.4 + 2.4) * 60,
-                  child: _Orb(color: AppTheme.cyan, diameter: 160, opacity: 0.08),
+                  child: const _Orb(color: AppTheme.cyan, diameter: 160, opacity: 0.08),
                 ),
               ],
             );
@@ -110,7 +110,7 @@ class _Orb extends StatelessWidget {
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         gradient: RadialGradient(
-          colors: [color.withOpacity(opacity * 1.8), color.withOpacity(0)],
+          colors: [color.withValues(alpha: (opacity * 1.8).clamp(0.0, 1.0)), color.withValues(alpha: 0)],
         ),
       ),
     );

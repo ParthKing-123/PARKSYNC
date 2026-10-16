@@ -104,12 +104,12 @@ class _AddParkingScreenState extends State<AddParkingScreen> {
                 const SizedBox(height: 8),
                 const Text('Dimensions (mm)', style: TextStyle(fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
-                Row(
+                const Row(
                   children: [
                     Expanded(child: TextField(decoration: InputDecoration(labelText: 'Length'), keyboardType: TextInputType.number)),
-                    const SizedBox(width: 8),
+                    SizedBox(width: 8),
                     Expanded(child: TextField(decoration: InputDecoration(labelText: 'Width'), keyboardType: TextInputType.number)),
-                    const SizedBox(width: 8),
+                    SizedBox(width: 8),
                     Expanded(child: TextField(decoration: InputDecoration(labelText: 'Height Clearance'), keyboardType: TextInputType.number)),
                   ],
                 ),
@@ -155,17 +155,17 @@ class _AddParkingScreenState extends State<AddParkingScreen> {
           ),
           Step(
             title: const Text('Availability & Price'),
-            content: Column(
+            content: const Column(
               children: [
-                const TextField(
+                TextField(
                   decoration: InputDecoration(
                     labelText: 'Price per hour (₹)',
                     prefixText: '₹ ',
                   ),
                   keyboardType: TextInputType.number,
                 ),
-                const SizedBox(height: 16),
-                const TextField(
+                SizedBox(height: 16),
+                TextField(
                   decoration: InputDecoration(
                     labelText: 'Operating Hours',
                     hintText: 'e.g. 09:00 AM - 06:00 PM',
