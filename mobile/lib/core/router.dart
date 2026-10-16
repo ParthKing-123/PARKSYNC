@@ -85,8 +85,8 @@ final appRouter = GoRouter(
     ),
     GoRoute(
       path: '/booking-confirmation',
-      builder: (context, state) => BookingConfirmationScreen(
-          bookingRef: state.extra as String? ?? ''),
+      builder: (context, state) =>
+          BookingConfirmationScreen(bookingData: state.extra),
     ),
     GoRoute(
       path: '/capture-evidence',

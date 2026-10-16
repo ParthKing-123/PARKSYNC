@@ -11,27 +11,48 @@ class BookingCheckoutScreen extends StatefulWidget {
 }
 
 class _BookingCheckoutScreenState extends State<BookingCheckoutScreen> {
-  bool _isLoading = false;
+  // Booking lifecycle states: IDLE -> SENDING -> AWAITING_HOST -> APPROVED
+  String _approvalState = 'IDLE';
 
-  void _processPayment(String amount) async {
-    setState(() => _isLoading = true);
-    // Simulate payment gateway processing
-    await Future.delayed(const Duration(milliseconds: 1400));
-    setState(() => _isLoading = false);
+  void _sendRequestToHost(String parkingName, String totalAmount, String date, String slot, String duration) async {
+    setState(() => _approvalState = 'SENDING');
 
-    if (mounted) {
-      context.push('/booking-confirmation', extra: 'BK-AB12CD');
-    }
+    // 1. Dispatching request
+    await Future.delayed(const Duration(milliseconds: 900));
+    if (!mounted) return;
+
+    setState(() => _approvalState = 'AWAITING_HOST');
+
+    // 2. Host reviews and confirms
+    await Future.delayed(const Duration(milliseconds: 2200));
+    if (!mounted) return;
+
+    setState(() => _approvalState = 'APPROVED');
+
+    // 3. Navigate to confirmation screen
+    await Future.delayed(const Duration(milliseconds: 900));
+    if (!mounted) return;
+
+    context.push(
+      '/booking-confirmation',
+      extra: {
+        'bookingRef': 'PS-8924',
+        'parkingName': parkingName,
+        'date': date,
+        'slot': slot,
+        'duration': duration,
+        'amount': totalAmount,
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    // Extract passed booking metadata
     String parkingName = 'Metro Grand Parking Bay';
     String date = 'Today';
-    String slot = '10:00 AM';
-    String duration = '2 Hours';
-    String totalAmount = '₹110.00';
+    String slot = '10:00 AM to 10:47 AM';
+    String duration = '47 Mins';
+    String totalAmount = '₹49.17';
 
     if (widget.bookingData is Map<String, dynamic>) {
       final data = widget.bookingData as Map<String, dynamic>;
@@ -47,12 +68,12 @@ class _BookingCheckoutScreenState extends State<BookingCheckoutScreen> {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text('Confirm & Checkout'),
+        title: const Text('Review Booking Request'),
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
-          onPressed: () => context.pop(),
+          onPressed: _approvalState == 'IDLE' ? () => context.pop() : null,
         ),
       ),
       body: SafeArea(
@@ -61,7 +82,7 @@ class _BookingCheckoutScreenState extends State<BookingCheckoutScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Spot Header Card
+              // Spot & Custom Time Card
               Container(
                 padding: const EdgeInsets.all(18),
                 decoration: BoxDecoration(
@@ -74,22 +95,55 @@ class _BookingCheckoutScreenState extends State<BookingCheckoutScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      parkingName,
-                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w800,
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            parkingName,
+                            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.w800,
+                                ),
                           ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: AppTheme.success.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: const Text(
+                            'Host Online ●',
+                            style: TextStyle(
+                              color: AppTheme.success,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        const Icon(Icons.calendar_today_rounded, size: 15, color: AppTheme.cyan),
+                        const SizedBox(width: 8),
+                        Text(
+                          date,
+                          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 6),
                     Row(
                       children: [
-                        const Icon(Icons.schedule_rounded, size: 16, color: AppTheme.cyan),
-                        const SizedBox(width: 6),
+                        const Icon(Icons.access_time_rounded, size: 15, color: AppTheme.cyan),
+                        const SizedBox(width: 8),
                         Text(
-                          '$date • $slot ($duration)',
+                          '$slot ($duration)',
                           style: TextStyle(
-                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.85),
                             fontWeight: FontWeight.w600,
                             fontSize: 13,
                           ),
@@ -100,9 +154,93 @@ class _BookingCheckoutScreenState extends State<BookingCheckoutScreen> {
                 ),
               ),
 
-              const SizedBox(height: 20),
+              const SizedBox(height: 18),
 
-              // Price Breakdown Card
+              // Host Approval Status Banner
+              if (_approvalState != 'IDLE')
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: _approvalState == 'APPROVED'
+                        ? AppTheme.success.withValues(alpha: 0.15)
+                        : AppTheme.cyan.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: _approvalState == 'APPROVED'
+                          ? AppTheme.success
+                          : AppTheme.cyan,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      if (_approvalState == 'SENDING') ...[
+                        const SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(strokeWidth: 2.5, color: AppTheme.cyan),
+                        ),
+                        const SizedBox(width: 14),
+                        const Expanded(
+                          child: Text(
+                            'Sending booking request to parking host...',
+                            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                          ),
+                        ),
+                      ] else if (_approvalState == 'AWAITING_HOST') ...[
+                        const SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(strokeWidth: 2.5, color: AppTheme.cyan),
+                        ),
+                        const SizedBox(width: 14),
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Host reviewing request...',
+                                style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
+                              ),
+                              SizedBox(height: 2),
+                              Text(
+                                'Metro Grand Host is confirming bay allocation',
+                                style: TextStyle(color: Colors.grey, fontSize: 12),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ] else if (_approvalState == 'APPROVED') ...[
+                        const Icon(Icons.check_circle_rounded, color: AppTheme.success, size: 24),
+                        const SizedBox(width: 14),
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Host Confirmed Request!',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 14,
+                                  color: AppTheme.success,
+                                ),
+                              ),
+                              SizedBox(height: 2),
+                              Text(
+                                'Finalizing reservation details...',
+                                style: TextStyle(fontSize: 12),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+
+              const SizedBox(height: 18),
+
+              // Payment Summary
               Container(
                 padding: const EdgeInsets.all(18),
                 decoration: BoxDecoration(
@@ -116,29 +254,29 @@ class _BookingCheckoutScreenState extends State<BookingCheckoutScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      'Payment Summary',
+                      'Payment & Rate Breakdown',
                       style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
                     ),
-                    const SizedBox(height: 14),
-                    _buildPriceRow('Parking Spot Fee', '₹100.00'),
-                    const SizedBox(height: 8),
-                    _buildPriceRow('Platform & Security Fee', '₹10.00'),
-                    const SizedBox(height: 8),
-                    _buildPriceRow('GST (Inclusive)', '₹0.00'),
-                    const Divider(height: 24),
+                    const SizedBox(height: 12),
+                    _buildPriceRow('Parking Spot Duration', duration),
+                    const SizedBox(height: 6),
+                    _buildPriceRow('Pro-rata Spot Charge', '₹${(double.tryParse(totalAmount.replaceAll(RegExp(r'[^0-9.]'), '')) ?? 49.17) - 10.0}'),
+                    const SizedBox(height: 6),
+                    _buildPriceRow('Host Protection & Platform Fee', '₹10.00'),
+                    const Divider(height: 20),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         const Text(
                           'Total Payable',
-                          style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+                          style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
                         ),
                         Text(
                           totalAmount,
                           style: TextStyle(
                             color: isDark ? AppTheme.cyan : AppTheme.cyanLight,
                             fontWeight: FontWeight.w900,
-                            fontSize: 20,
+                            fontSize: 19,
                           ),
                         ),
                       ],
@@ -147,58 +285,47 @@ class _BookingCheckoutScreenState extends State<BookingCheckoutScreen> {
                 ),
               ),
 
-              const SizedBox(height: 20),
+              const SizedBox(height: 18),
 
-              // Payment method selector
+              // Host Guarantee Banner
               Container(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surface,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: Theme.of(context).dividerTheme.color ?? const Color(0xFF1C2A42),
-                  ),
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(14),
                 ),
                 child: Row(
                   children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: AppTheme.success.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Icon(Icons.account_balance_wallet_rounded,
-                          color: AppTheme.success, size: 20),
-                    ),
-                    const SizedBox(width: 14),
-                    const Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('UPI / Instant Pay',
-                              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
-                          Text('Google Pay, PhonePe, Paytm, Cards',
-                              style: TextStyle(color: Colors.grey, fontSize: 12)),
-                        ],
+                    const Icon(Icons.security_rounded, size: 20, color: AppTheme.cyan),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Host confirmation is required. You will only be charged after the host confirms your reservation.',
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.outline,
+                          fontSize: 11,
+                          height: 1.4,
+                        ),
                       ),
                     ),
-                    const Icon(Icons.check_circle_rounded, color: AppTheme.cyan, size: 20),
                   ],
                 ),
               ),
 
               const Spacer(),
 
-              // Pay CTA Button
+              // Submit Button
               ElevatedButton(
-                onPressed: _isLoading ? null : () => _processPayment(totalAmount),
-                child: _isLoading
-                    ? const SizedBox(
+                onPressed: _approvalState == 'IDLE'
+                    ? () => _sendRequestToHost(parkingName, totalAmount, date, slot, duration)
+                    : null,
+                child: _approvalState == 'IDLE'
+                    ? Text('Send Booking Request to Host • $totalAmount')
+                    : const SizedBox(
                         width: 22,
                         height: 22,
                         child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black),
-                      )
-                    : Text('Pay $totalAmount & Reserve Bay'),
+                      ),
               ),
               const SizedBox(height: 16),
             ],
@@ -216,12 +343,12 @@ class _BookingCheckoutScreenState extends State<BookingCheckoutScreen> {
           label,
           style: TextStyle(
             color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.65),
-            fontSize: 13,
+            fontSize: 12,
           ),
         ),
         Text(
           amount,
-          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
         ),
       ],
     );
