@@ -586,14 +586,8 @@ class _SearchScreenState extends State<SearchScreen> {
             ),
             children: [
               TileLayer(
-                urlTemplate: isDark
-                    ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-                    : 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-                subdomains: const ['a', 'b', 'c', 'd'],
-                retinaMode: true,
+                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                 userAgentPackageName: 'com.parksync.app',
-                fallbackUrl: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                tileDisplay: const TileDisplay.instantaneous(),
               ),
               MarkerLayer(markers: markers),
             ],
