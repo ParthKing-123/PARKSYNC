@@ -490,53 +490,74 @@ class _SearchScreenState extends State<SearchScreen> {
       // 3. Nearby Parking Spot Markers with dynamic pricing tags
       ...spots.map((spot) {
         final isSelected = _selectedSpotId == spot.id;
+        final bg = isSelected
+            ? (isDark ? AppTheme.butter : AppTheme.forestGreen)
+            : (isDark ? const Color(0xFF143B33) : AppTheme.butterCream);
+        final fg = isSelected
+            ? (isDark ? AppTheme.forestGreenDark : AppTheme.butter)
+            : (isDark ? AppTheme.accentGold : AppTheme.forestGreen);
+        final borderColor = isSelected
+            ? (isDark ? AppTheme.accentGold : AppTheme.butter)
+            : (isDark ? const Color(0xFF23695B) : AppTheme.borderLight);
 
         return Marker(
           point: spot.position,
-          width: isSelected ? 110 : 96,
-          height: 52,
+          width: isSelected ? 116 : 102,
+          height: 44,
           child: GestureDetector(
             onTap: () {
               setState(() => _selectedSpotId = spot.id);
               _mapController.move(spot.position, 16.0);
             },
             child: AnimatedContainer(
-              duration: const Duration(milliseconds: 250),
+              duration: const Duration(milliseconds: 200),
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
-                color: isSelected
-                    ? AppTheme.forestGreen
-                    : (isDark ? AppTheme.forestSurface : AppTheme.butterCream),
-                borderRadius: BorderRadius.circular(22),
+                color: bg,
+                borderRadius: BorderRadius.circular(16),
                 border: Border.all(
-                  color: isSelected ? AppTheme.butter : AppTheme.forestGreen,
-                  width: isSelected ? 2.5 : 1.5,
+                  color: borderColor,
+                  width: isSelected ? 2.0 : 1.2,
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: isSelected
-                        ? AppTheme.forestGreen.withValues(alpha: 0.5)
-                        : Colors.black.withValues(alpha: 0.2),
-                    blurRadius: isSelected ? 12 : 6,
+                    color: Colors.black.withValues(alpha: isDark ? 0.45 : 0.22),
+                    blurRadius: 8,
                     offset: const Offset(0, 3),
                   ),
                 ],
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                    Icons.local_parking_rounded,
-                    color: isSelected ? AppTheme.butter : AppTheme.forestGreen,
-                    size: 16,
+                  Container(
+                    width: 22,
+                    height: 22,
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? (isDark ? AppTheme.forestGreenDark : AppTheme.butter.withValues(alpha: 0.2))
+                          : (isDark ? const Color(0xFF0D2520) : AppTheme.forestGreen.withValues(alpha: 0.12)),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Center(
+                      child: Text(
+                        'P',
+                        style: TextStyle(
+                          color: fg,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
                   ),
-                  const SizedBox(width: 4),
+                  const SizedBox(width: 6),
                   Text(
                     '₹${spot.ratePerHour.toInt()}/h',
                     style: TextStyle(
-                      fontWeight: FontWeight.w800,
-                      fontSize: 12,
-                      color: isSelected ? AppTheme.butter : (isDark ? AppTheme.butter : AppTheme.forestGreen),
+                      fontWeight: FontWeight.w900,
+                      fontSize: 13,
+                      color: fg,
                     ),
                   ),
                 ],
@@ -565,8 +586,14 @@ class _SearchScreenState extends State<SearchScreen> {
             ),
             children: [
               TileLayer(
-                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                urlTemplate: isDark
+                    ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+                    : 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+                subdomains: const ['a', 'b', 'c', 'd'],
+                retinaMode: true,
                 userAgentPackageName: 'com.parksync.app',
+                fallbackUrl: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                tileDisplay: const TileDisplay.instantaneous(),
               ),
               MarkerLayer(markers: markers),
             ],
@@ -603,6 +630,8 @@ class _SearchScreenState extends State<SearchScreen> {
                         icon: Icons.arrow_back_ios_new_rounded,
                         size: 44,
                         iconSize: 18,
+                        color: isDark ? null : AppTheme.butter,
+                        iconColor: isDark ? AppTheme.butter : AppTheme.forestGreen,
                         onTap: () => context.pop(),
                       ),
                       const SizedBox(width: 8),
@@ -610,16 +639,24 @@ class _SearchScreenState extends State<SearchScreen> {
                         child: NeumorphicCard(
                           padding: const EdgeInsets.symmetric(horizontal: 12),
                           radius: 16,
+                          color: isDark ? null : AppTheme.butter,
                           child: Row(
                             children: [
                               if (_isSearchingLocation)
-                                const SizedBox(
+                                SizedBox(
                                   width: 18,
                                   height: 18,
-                                  child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.forestGreen),
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: isDark ? AppTheme.accentGold : AppTheme.forestGreen,
+                                  ),
                                 )
                               else
-                                const Icon(Icons.search_rounded, size: 20, color: AppTheme.forestGreen),
+                                Icon(
+                                  Icons.search_rounded,
+                                  size: 20,
+                                  color: isDark ? AppTheme.accentGold : AppTheme.forestGreen,
+                                ),
                               const SizedBox(width: 8),
                               Expanded(
                                 child: TextField(
@@ -627,14 +664,16 @@ class _SearchScreenState extends State<SearchScreen> {
                                   style: TextStyle(
                                     fontSize: 14,
                                     fontWeight: FontWeight.w600,
-                                    color: Theme.of(context).colorScheme.onSurface,
+                                    color: isDark ? AppTheme.butter : AppTheme.forestGreen,
                                   ),
                                   decoration: InputDecoration(
                                     hintText: 'Search city, landmark, or area (OSM)...',
                                     hintStyle: TextStyle(
-                                      color: Theme.of(context).colorScheme.outline,
+                                      color: isDark ? const Color(0xFFA5C9C1) : AppTheme.textMutedLight,
                                       fontSize: 13,
                                     ),
+                                    filled: true,
+                                    fillColor: Colors.transparent,
                                     border: InputBorder.none,
                                     enabledBorder: InputBorder.none,
                                     focusedBorder: InputBorder.none,
@@ -647,13 +686,18 @@ class _SearchScreenState extends State<SearchScreen> {
                               if (_searchCtrl.text.isNotEmpty)
                                 IconButton(
                                   icon: const Icon(Icons.clear_rounded, size: 18),
+                                  color: isDark ? AppTheme.butter : AppTheme.forestGreen,
                                   onPressed: () {
                                     _searchCtrl.clear();
                                     setState(() => _osmSearchResults.clear());
                                   },
                                 ),
                               IconButton(
-                                icon: const Icon(Icons.arrow_forward_rounded, size: 18, color: AppTheme.forestGreen),
+                                icon: Icon(
+                                  Icons.arrow_forward_rounded,
+                                  size: 18,
+                                  color: isDark ? AppTheme.accentGold : AppTheme.forestGreen,
+                                ),
                                 tooltip: 'Search location on OpenStreetMap',
                                 onPressed: () => _searchOpenStreetMap(_searchCtrl.text),
                               ),
@@ -666,7 +710,8 @@ class _SearchScreenState extends State<SearchScreen> {
                         icon: Icons.tune_rounded,
                         size: 44,
                         iconSize: 20,
-                        iconColor: AppTheme.forestGreen,
+                        color: isDark ? null : AppTheme.butter,
+                        iconColor: isDark ? AppTheme.butter : AppTheme.forestGreen,
                         onTap: _showFilters,
                       ),
                     ],
@@ -682,17 +727,25 @@ class _SearchScreenState extends State<SearchScreen> {
                         onTap: _isDetectingGps ? null : () => _detectCurrentLocation(),
                         radius: 20,
                         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                        color: isDark ? null : AppTheme.butter,
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             if (_isDetectingGps)
-                              const SizedBox(
+                              SizedBox(
                                 width: 12,
                                 height: 12,
-                                child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.forestGreen),
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: isDark ? AppTheme.accentGold : AppTheme.forestGreen,
+                                ),
                               )
                             else
-                              const Icon(Icons.my_location_rounded, size: 13, color: AppTheme.forestGreen),
+                              Icon(
+                                Icons.my_location_rounded,
+                                size: 13,
+                                color: isDark ? AppTheme.accentGold : AppTheme.forestGreen,
+                              ),
                             const SizedBox(width: 6),
                             Text(
                               _isDetectingGps ? 'Detecting GPS location...' : 'Auto-detect my location',
@@ -889,13 +942,15 @@ class _SearchScreenState extends State<SearchScreen> {
     bool isAccent = false,
     bool isLoading = false,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return NeumorphicIconBadge(
       icon: icon,
       size: 46,
       iconSize: 22,
+      color: isDark ? null : AppTheme.butter,
       iconColor: isAccent
-          ? (Theme.of(context).brightness == Brightness.dark ? AppTheme.butter : AppTheme.forestGreen)
-          : Theme.of(context).colorScheme.primary,
+          ? (isDark ? AppTheme.accentGold : AppTheme.forestGreen)
+          : (isDark ? AppTheme.butter : AppTheme.forestGreen),
       onTap: onPressed,
     );
   }

@@ -168,17 +168,17 @@ class _NeumorphicButtonState extends State<NeumorphicButton> {
       } else {
         gradient = _isDown
             ? const LinearGradient(
-                colors: [Color(0xFFF0DC9D), Color(0xFFFFFBE8)],
+                colors: [Color(0xFFEED792), Color(0xFFFFF6D1)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               )
             : const LinearGradient(
-                colors: [Color(0xFFFFFDF5), Color(0xFFF7E5B0)],
+                colors: [Color(0xFFFFF6D1), Color(0xFFF2D98D)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               );
         border = Border.all(
-          color: const Color(0xFFFFFFFF).withValues(alpha: 0.85),
+          color: const Color(0xFFE8D49B).withValues(alpha: 0.85),
           width: 1.0,
         );
       }
@@ -206,13 +206,16 @@ class _NeumorphicButtonState extends State<NeumorphicButton> {
                 : AppTheme.neumorphicShadows(isDark: isDark, distance: 4.5, blur: 12),
           ),
           child: Center(
-            child: DefaultTextStyle(
-              style: TextStyle(
-                color: fg,
-                fontWeight: FontWeight.w800,
-                fontSize: 14,
+            child: IconTheme(
+              data: IconThemeData(color: fg),
+              child: DefaultTextStyle(
+                style: TextStyle(
+                  color: fg,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 14,
+                ),
+                child: widget.child,
               ),
-              child: widget.child,
             ),
           ),
         ),
@@ -254,7 +257,7 @@ class NeumorphicIconBadge extends StatelessWidget {
                 end: Alignment.bottomRight,
               )
             : const LinearGradient(
-                colors: [Color(0xFFFFFDF5), Color(0xFFF7E5B0)],
+                colors: [Color(0xFFFFF6D1), Color(0xFFF2D98D)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ));
@@ -269,7 +272,7 @@ class NeumorphicIconBadge extends StatelessWidget {
         border: Border.all(
           color: isDark
               ? const Color(0xFF23695B).withValues(alpha: 0.65)
-              : const Color(0xFFFFFFFF).withValues(alpha: 0.85),
+              : const Color(0xFFE8D49B).withValues(alpha: 0.85),
           width: 1.0,
         ),
       ),

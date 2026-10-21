@@ -308,24 +308,31 @@ class _GuestHomeScreenState extends State<GuestHomeScreen> {
           NeumorphicCard(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
             radius: 16,
+            color: isDark ? null : AppTheme.butter,
             child: Row(
               children: [
-                const Icon(Icons.search_rounded, color: AppTheme.forestGreen, size: 22),
+                Icon(
+                  Icons.search_rounded,
+                  color: isDark ? AppTheme.accentGold : AppTheme.forestGreen,
+                  size: 22,
+                ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: TextField(
                     controller: _searchCtrl,
                     style: TextStyle(
                       fontSize: 15,
-                      fontWeight: FontWeight.w500,
-                      color: Theme.of(context).colorScheme.onSurface,
+                      fontWeight: FontWeight.w600,
+                      color: isDark ? AppTheme.butter : AppTheme.forestGreen,
                     ),
                     decoration: InputDecoration(
                       hintText: isEn ? l!.searchPlaceholder : 'Search destination or area...',
                       hintStyle: TextStyle(
-                        color: Theme.of(context).colorScheme.outline,
+                        color: isDark ? const Color(0xFFA5C9C1) : AppTheme.textMutedLight,
                         fontSize: 14,
                       ),
+                      filled: true,
+                      fillColor: Colors.transparent,
                       border: InputBorder.none,
                       enabledBorder: InputBorder.none,
                       focusedBorder: InputBorder.none,
@@ -339,7 +346,7 @@ class _GuestHomeScreenState extends State<GuestHomeScreen> {
                 if (_searchCtrl.text.isNotEmpty)
                   IconButton(
                     icon: const Icon(Icons.clear_rounded, size: 18),
-                    color: Theme.of(context).colorScheme.outline,
+                    color: isDark ? AppTheme.butter : AppTheme.forestGreen,
                     onPressed: () {
                       _searchCtrl.clear();
                       setState(() {});
@@ -350,7 +357,8 @@ class _GuestHomeScreenState extends State<GuestHomeScreen> {
                   icon: Icons.map_rounded,
                   size: 36,
                   iconSize: 18,
-                  iconColor: AppTheme.forestGreen,
+                  color: isDark ? null : AppTheme.butterElevated,
+                  iconColor: isDark ? AppTheme.butter : AppTheme.forestGreen,
                   onTap: () => context.push('/search', extra: _searchCtrl.text),
                 ),
               ],

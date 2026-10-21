@@ -1155,12 +1155,23 @@ class _ParkingDetailScreenState extends State<ParkingDetailScreen> {
                       height: 50,
                       isPrimary: true,
                       onPressed: _openBookingSheet,
-                      child: const Row(
+                      child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.calendar_today_rounded, size: 16),
-                          SizedBox(width: 8),
-                          Text('Select Time & Book', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
+                          Icon(
+                            Icons.calendar_today_rounded,
+                            size: 16,
+                            color: isDark ? AppTheme.forestGreenDark : AppTheme.butter,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Select Time & Book',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w800,
+                              fontSize: 14,
+                              color: isDark ? AppTheme.forestGreenDark : AppTheme.butter,
+                            ),
+                          ),
                         ],
                       ),
                     ),
