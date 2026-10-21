@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../../shared/theme/app_theme.dart';
+import '../../../shared/widgets/neumorphic_container.dart';
+import '../../../shared/widgets/sweet_popup.dart';
 
 class AddParkingScreen extends StatefulWidget {
   final String providerType;
@@ -15,20 +18,46 @@ class _AddParkingScreenState extends State<AddParkingScreen> {
 
   void _submit() async {
     setState(() => _isLoading = true);
-    await Future.delayed(const Duration(seconds: 1));
+    await Future.delayed(const Duration(milliseconds: 900));
     setState(() => _isLoading = false);
     
     if (mounted) {
-      // In real app, navigate to provider dashboard
-      context.go('/provider-home');
+      SweetPopup.show(
+        context,
+        title: 'Listing Submitted!',
+        message: 'Your parking space is submitted for platform verification.',
+        icon: Icons.check_circle_rounded,
+        iconColor: AppTheme.success,
+      );
+
+      await Future.delayed(const Duration(milliseconds: 600));
+
+      if (mounted) {
+        context.go('/provider-home');
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text('Add Parking Space'),
+        title: Text(
+          'Add Parking Space',
+          style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize: 18),
+        ),
+        leading: Padding(
+          padding: const EdgeInsets.only(left: 12.0),
+          child: Center(
+            child: NeumorphicIconBadge(
+              icon: Icons.arrow_back_ios_new_rounded,
+              size: 38,
+              iconSize: 18,
+              onTap: () => context.pop(),
+            ),
+          ),
+        ),
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
@@ -55,11 +84,13 @@ class _AddParkingScreenState extends State<AddParkingScreen> {
             child: Row(
               children: [
                 Expanded(
-                  child: ElevatedButton(
+                  child: NeumorphicButton(
+                    height: 48,
                     onPressed: _isLoading ? null : details.onStepContinue,
                     child: _isLoading 
-                        ? const CircularProgressIndicator(color: Colors.black)
-                        : Text(_currentStep == 5 ? 'Submit' : 'Continue'),
+                        ? const CircularProgressIndicator(color: Colors.white)
+                        : Text(_currentStep == 5 ? 'Submit for Review' : 'Continue',
+                            style: const TextStyle(fontWeight: FontWeight.w700)),
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -141,14 +172,25 @@ class _AddParkingScreenState extends State<AddParkingScreen> {
           ),
           Step(
             title: const Text('Photos'),
-            content: Container(
-              height: 120,
-              width: double.infinity,
-              decoration: BoxDecoration(
-                border: Border.all(color: Theme.of(context).colorScheme.primary, style: BorderStyle.solid),
-                borderRadius: BorderRadius.circular(12),
+            content: NeumorphicCard(
+              radius: 14,
+              padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.add_a_photo_outlined, size: 36, color: AppTheme.forestGreen),
+                    const SizedBox(height: 10),
+                    Text(
+                      'Tap to upload Entry, Bay & Exit photos',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              child: const Center(child: Text('Tap to upload Entry, Space, and Exit photos')),
             ),
             isActive: _currentStep >= 3,
             state: _currentStep > 3 ? StepState.complete : StepState.indexed,
@@ -178,7 +220,7 @@ class _AddParkingScreenState extends State<AddParkingScreen> {
           ),
           Step(
             title: const Text('Verification Info'),
-            content: const Text('As a business, you will need to submit proof of authorization before this listing goes live. Admin will verify it.'),
+            content: const Text('As a business or private host, you will need to submit proof of authorization before this listing goes live. Admin will verify it.'),
             isActive: _currentStep >= 5,
             state: _currentStep > 5 ? StepState.complete : StepState.indexed,
           ),

@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../../shared/theme/app_theme.dart';
+import '../../../shared/widgets/neumorphic_container.dart';
+import '../../../shared/widgets/sweet_popup.dart';
 
 class CaptureEvidenceScreen extends StatefulWidget {
   final String bookingId;
@@ -17,14 +20,26 @@ class _CaptureEvidenceScreenState extends State<CaptureEvidenceScreen> {
 
   void _submitEvidence() async {
     setState(() => _isLoading = true);
-    await Future.delayed(const Duration(seconds: 1));
+    await Future.delayed(const Duration(milliseconds: 800));
     setState(() => _isLoading = false);
 
     if (mounted) {
-      if (widget.type == 'AFTER') {
-        context.push('/add-review', extra: widget.bookingId);
-      } else {
-        context.go('/home'); // Go back to active booking view
+      SweetPopup.show(
+        context,
+        title: 'Evidence Uploaded!',
+        message: 'Your parking verification photo has been recorded.',
+        icon: Icons.verified_rounded,
+        iconColor: AppTheme.success,
+      );
+
+      await Future.delayed(const Duration(milliseconds: 600));
+
+      if (mounted) {
+        if (widget.type == 'AFTER') {
+          context.push('/add-review', extra: widget.bookingId);
+        } else {
+          context.go('/home'); // Go back to active booking view
+        }
       }
     }
   }
@@ -32,8 +47,23 @@ class _CaptureEvidenceScreenState extends State<CaptureEvidenceScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        title: Text(widget.type == 'BEFORE' ? 'Parked Safely?' : 'Leaving?'),
+        title: Text(
+          widget.type == 'BEFORE' ? 'Parked Safely?' : 'Leaving Bay?',
+          style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize: 18),
+        ),
+        leading: Padding(
+          padding: const EdgeInsets.only(left: 12.0),
+          child: Center(
+            child: NeumorphicIconBadge(
+              icon: Icons.arrow_back_ios_new_rounded,
+              size: 38,
+              iconSize: 18,
+              onTap: () => context.pop(),
+            ),
+          ),
+        ),
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
@@ -49,48 +79,84 @@ class _CaptureEvidenceScreenState extends State<CaptureEvidenceScreen> {
                     : 'Take a photo showing you left the space empty and clean.',
                 style: Theme.of(context).textTheme.bodyLarge,
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 28),
               
               // Camera Placeholder
               Expanded(
                 child: GestureDetector(
                   onTap: () {
                     setState(() => _isCaptured = true);
+                    SweetPopup.show(
+                      context,
+                      title: 'Photo Captured',
+                      message: 'Preview captured photo or retake if needed.',
+                      icon: Icons.camera_alt_rounded,
+                      iconColor: AppTheme.forestGreen,
+                    );
                   },
-                  child: Container(
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.surface,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3)),
-                      image: _isCaptured ? const DecorationImage(
-                        image: NetworkImage('https://via.placeholder.com/400x600/141416/00FF87?text=Photo+Captured'),
-                        fit: BoxFit.cover,
-                      ) : null,
+                  child: NeumorphicCard(
+                    radius: 20,
+                    padding: EdgeInsets.zero,
+                    child: Container(
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(20),
+                        image: _isCaptured ? const DecorationImage(
+                          image: NetworkImage('https://via.placeholder.com/400x600/013E37/FFEFB3?text=Bay+Photo+Recorded'),
+                          fit: BoxFit.cover,
+                        ) : null,
+                      ),
+                      child: !_isCaptured 
+                          ? Center(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const NeumorphicIconBadge(
+                                    icon: Icons.camera_alt_rounded,
+                                    size: 72,
+                                    iconSize: 36,
+                                    iconColor: AppTheme.forestGreen,
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    'Tap anywhere to capture photo',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                      color: Theme.of(context).colorScheme.onSurface,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Timestamped & encrypted for verification',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Theme.of(context).colorScheme.outline,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )
+                          : const SizedBox(),
                     ),
-                    child: !_isCaptured 
-                        ? Center(
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.camera_alt, size: 64, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5)),
-                                const SizedBox(height: 16),
-                                const Text('Tap to open camera'),
-                              ],
-                            ),
-                          )
-                        : const SizedBox(),
                   ),
                 ),
               ),
               
-              const SizedBox(height: 32),
+              const SizedBox(height: 28),
               
-              ElevatedButton(
+              NeumorphicButton(
+                height: 52,
                 onPressed: (_isCaptured && !_isLoading) ? _submitEvidence : null,
                 child: _isLoading 
-                    ? const CircularProgressIndicator(color: Colors.black)
-                    : const Text('Submit Photo'),
+                    ? const CircularProgressIndicator(color: Colors.white)
+                    : Text(
+                        'Submit Photo Evidence',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15,
+                          color: _isCaptured ? Colors.white : Colors.grey,
+                        ),
+                      ),
               ),
               
               if (widget.type == 'BEFORE') ...[
@@ -98,7 +164,7 @@ class _CaptureEvidenceScreenState extends State<CaptureEvidenceScreen> {
                 Center(
                   child: TextButton(
                     onPressed: () => context.go('/home'),
-                    child: const Text('Skip for now'),
+                    child: const Text('Skip for now', style: TextStyle(fontWeight: FontWeight.w600)),
                   ),
                 ),
               ]

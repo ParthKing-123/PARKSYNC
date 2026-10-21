@@ -1,10 +1,9 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'dart:ui';
-import '../../shared/theme/app_theme.dart';
+import '../theme/app_theme.dart';
 
-/// Premium animated gradient background — used on auth / onboarding screens.
-/// Features 3 slow-moving orbs with glassmorphism blur.
+/// Premium animated floating background — theme-aware with Butter & Forest Green orbs.
 class AnimatedFloatingBackground extends StatefulWidget {
   final Widget child;
 
@@ -35,15 +34,25 @@ class _AnimatedFloatingBackgroundState extends State<AnimatedFloatingBackground>
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final bgColors = isDark
+        ? [AppTheme.forestBase, const Color(0xFF04100D)]
+        : [AppTheme.butter, const Color(0xFFFFF6D1)];
+
+    final orbColor1 = isDark ? AppTheme.butter : AppTheme.forestGreen;
+    final orbColor2 = isDark ? AppTheme.forestEmerald : const Color(0xFFE2C882);
+    final orbColor3 = isDark ? AppTheme.forestGreenLight : AppTheme.forestGreen;
+
     return Stack(
       children: [
         // Base background
         Container(
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [Color(0xFF0A0F1E), Color(0xFF060910)],
+              colors: bgColors,
             ),
           ),
         ),
@@ -57,23 +66,23 @@ class _AnimatedFloatingBackgroundState extends State<AnimatedFloatingBackground>
 
             return Stack(
               children: [
-                // Orb 1 – cyan, large, top area
+                // Orb 1 – top area
                 Positioned(
                   left: size.width * 0.15 + cos(t * 0.7) * 60,
                   top: size.height * 0.05 + sin(t * 0.7) * 80,
-                  child: const _Orb(color: AppTheme.cyan, diameter: 280, opacity: 0.12),
+                  child: _Orb(color: orbColor1, diameter: 280, opacity: isDark ? 0.09 : 0.10),
                 ),
-                // Orb 2 – violet, mid-right
+                // Orb 2 – mid-right
                 Positioned(
                   right: size.width * 0.05 + sin(t * 0.5 + 1.2) * 50,
                   top: size.height * 0.35 + cos(t * 0.5 + 1.2) * 70,
-                  child: const _Orb(color: AppTheme.violet, diameter: 240, opacity: 0.14),
+                  child: _Orb(color: orbColor2, diameter: 240, opacity: isDark ? 0.12 : 0.18),
                 ),
-                // Orb 3 – cyan tiny, bottom-left
+                // Orb 3 – bottom-left
                 Positioned(
                   left: size.width * 0.05 + cos(t * 0.4 + 2.4) * 40,
                   bottom: size.height * 0.1 + sin(t * 0.4 + 2.4) * 60,
-                  child: const _Orb(color: AppTheme.cyan, diameter: 160, opacity: 0.08),
+                  child: _Orb(color: orbColor3, diameter: 160, opacity: isDark ? 0.08 : 0.08),
                 ),
               ],
             );
@@ -110,7 +119,10 @@ class _Orb extends StatelessWidget {
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         gradient: RadialGradient(
-          colors: [color.withValues(alpha: (opacity * 1.8).clamp(0.0, 1.0)), color.withValues(alpha: 0)],
+          colors: [
+            color.withValues(alpha: (opacity * 1.8).clamp(0.0, 1.0)),
+            color.withValues(alpha: 0),
+          ],
         ),
       ),
     );

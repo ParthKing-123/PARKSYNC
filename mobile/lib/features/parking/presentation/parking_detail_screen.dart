@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:parksync/l10n/app_localizations.dart';
 import '../../../shared/theme/app_theme.dart';
+import '../../../shared/widgets/neumorphic_container.dart';
+import '../../../shared/widgets/sweet_popup.dart';
 
 class ParkingDetailScreen extends StatefulWidget {
   final String parkingId;
@@ -15,6 +17,7 @@ class ParkingDetailScreen extends StatefulWidget {
 
 class _ParkingDetailScreenState extends State<ParkingDetailScreen> {
   // ── Booking Parameters ────────────────────────────────────────────────
+  bool _isSaved = false;
   DateTime _selectedDate = DateTime.now();
   int _durationMinutes = 60; // Default 1 hour (minimum 30 minutes)
   String _selectedSlot = '10:00 AM';
@@ -222,48 +225,38 @@ class _ParkingDetailScreenState extends State<ParkingDetailScreen> {
                           const SizedBox(height: 4),
 
                           // Selected Date Display Card
-                          InkWell(
+                          NeumorphicCard(
                             onTap: () => _pickDateFromCalendar(context, setModalState),
-                            borderRadius: BorderRadius.circular(12),
-                            child: Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                              decoration: BoxDecoration(
-                                color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: AppTheme.cyan.withValues(alpha: 0.4),
-                                ),
-                              ),
-                              child: Row(
-                                children: [
-                                  const Icon(Icons.event_available_rounded,
-                                      color: AppTheme.cyan, size: 20),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          _formatDate(_selectedDate),
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.w800,
-                                            fontSize: 14,
-                                          ),
+                            radius: 14,
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.event_available_rounded,
+                                    color: AppTheme.forestGreen, size: 20),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        _formatDate(_selectedDate),
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w800,
+                                          fontSize: 14,
                                         ),
-                                        Text(
-                                          'Tap to choose any date within 365 days',
-                                          style: TextStyle(
-                                            color: Theme.of(context).colorScheme.outline,
-                                            fontSize: 11,
-                                          ),
+                                      ),
+                                      Text(
+                                        'Tap to choose any date within 365 days',
+                                        style: TextStyle(
+                                          color: Theme.of(context).colorScheme.outline,
+                                          fontSize: 11,
                                         ),
-                                      ],
-                                    ),
+                                      ),
+                                    ],
                                   ),
-                                  const Icon(Icons.arrow_forward_ios_rounded, size: 14),
-                                ],
-                              ),
+                                ),
+                                const Icon(Icons.arrow_forward_ios_rounded, size: 14),
+                              ],
                             ),
                           ),
 
@@ -423,19 +416,12 @@ class _ParkingDetailScreenState extends State<ParkingDetailScreen> {
                           const SizedBox(height: 12),
 
                           // Interactive Custom Minute Stepper & Input
-                          Container(
+                          NeumorphicCard(
+                            radius: 14,
                             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                            decoration: BoxDecoration(
-                              color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                              borderRadius: BorderRadius.circular(14),
-                              border: Border.all(
-                                color: Theme.of(context).dividerTheme.color ??
-                                    const Color(0xFF1C2A42),
-                              ),
-                            ),
                             child: Row(
                               children: [
-                                const Icon(Icons.timer_outlined, size: 20, color: AppTheme.cyan),
+                                const Icon(Icons.timer_outlined, size: 20, color: AppTheme.forestGreen),
                                 const SizedBox(width: 10),
                                 const Text(
                                   'Custom Duration:',
@@ -447,7 +433,7 @@ class _ParkingDetailScreenState extends State<ParkingDetailScreen> {
                                 IconButton(
                                   icon: const Icon(Icons.remove_circle_outline_rounded, size: 22),
                                   color: _durationMinutes > 30
-                                      ? AppTheme.cyan
+                                      ? AppTheme.forestGreen
                                       : Theme.of(context).colorScheme.outline,
                                   onPressed: _durationMinutes > 30
                                       ? () {
@@ -491,7 +477,7 @@ class _ParkingDetailScreenState extends State<ParkingDetailScreen> {
                                 // [+ 5m]
                                 IconButton(
                                   icon: const Icon(Icons.add_circle_outline_rounded, size: 22),
-                                  color: AppTheme.cyan,
+                                  color: AppTheme.forestGreen,
                                   onPressed: () {
                                     setModalState(() {
                                       _durationMinutes = (_durationMinutes + 5).clamp(30, 1440);
@@ -509,16 +495,9 @@ class _ParkingDetailScreenState extends State<ParkingDetailScreen> {
                           // ══════════════════════════════════════════════
                           // 4. LIVE PRICE & SESSION BREAKDOWN
                           // ══════════════════════════════════════════════
-                          Container(
+                          NeumorphicCard(
+                            radius: 14,
                             padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                              borderRadius: BorderRadius.circular(14),
-                              border: Border.all(
-                                color: Theme.of(context).dividerTheme.color ??
-                                    const Color(0xFF1C2A42),
-                              ),
-                            ),
                             child: Column(
                               children: [
                                 _buildPriceRow(
@@ -551,7 +530,7 @@ class _ParkingDetailScreenState extends State<ParkingDetailScreen> {
                                     Text(
                                       '₹${_totalAmount.toStringAsFixed(2)}',
                                       style: TextStyle(
-                                        color: isDark ? AppTheme.cyan : AppTheme.cyanLight,
+                                        color: isDark ? AppTheme.butter : AppTheme.forestGreen,
                                         fontWeight: FontWeight.w900,
                                         fontSize: 18,
                                       ),
@@ -569,13 +548,15 @@ class _ParkingDetailScreenState extends State<ParkingDetailScreen> {
                   const SizedBox(height: 14),
 
                   // Send Request to Host CTA Button
-                  ElevatedButton(
+                  NeumorphicButton(
+                    height: 48,
                     onPressed: () {
                       Navigator.pop(ctx);
                       _proceedToCheckout();
                     },
                     child: Text(
                       'Request Spot from Host • ₹${_totalAmount.toStringAsFixed(2)}',
+                      style: const TextStyle(fontWeight: FontWeight.w700),
                     ),
                   ),
                 ],
@@ -714,6 +695,16 @@ class _ParkingDetailScreenState extends State<ParkingDetailScreen> {
               ),
               onPressed: () => context.pop(),
             ),
+            actions: [
+              Padding(
+                padding: const EdgeInsets.only(right: 12.0),
+                child: SweetBookmarkButton(
+                  isSaved: _isSaved,
+                  itemName: 'Parking Spot',
+                  onToggle: (saved) => setState(() => _isSaved = saved),
+                ),
+              ),
+            ],
             flexibleSpace: FlexibleSpaceBar(
               background: Container(
                 decoration: const BoxDecoration(
@@ -842,25 +833,19 @@ class _ParkingDetailScreenState extends State<ParkingDetailScreen> {
                   const SizedBox(height: 22),
 
                   // Vehicle Compatibility Banner
-                  Container(
-                    width: double.infinity,
+                  NeumorphicCard(
+                    radius: 16,
                     padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.surface,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                          color: AppTheme.cyan.withValues(alpha: 0.3)),
-                    ),
                     child: Row(
                       children: [
                         Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: AppTheme.cyan.withValues(alpha: 0.15),
+                            color: AppTheme.forestGreen.withValues(alpha: 0.15),
                             shape: BoxShape.circle,
                           ),
                           child: const Icon(Icons.check,
-                              color: AppTheme.cyan, size: 20),
+                              color: AppTheme.forestGreen, size: 20),
                         ),
                         const SizedBox(width: 14),
                         Expanded(
@@ -951,15 +936,9 @@ class _ParkingDetailScreenState extends State<ParkingDetailScreen> {
                   ),
                   const SizedBox(height: 12),
 
-                  Container(
+                  NeumorphicCard(
                     padding: const EdgeInsets.all(18),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.surface,
-                      borderRadius: BorderRadius.circular(18),
-                      border: Border.all(
-                        color: Theme.of(context).dividerTheme.color ?? const Color(0xFF1C2A42),
-                      ),
-                    ),
+                    radius: 18,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -967,8 +946,8 @@ class _ParkingDetailScreenState extends State<ParkingDetailScreen> {
                           children: [
                             CircleAvatar(
                               radius: 26,
-                              backgroundColor: AppTheme.cyan.withValues(alpha: 0.15),
-                              child: const Icon(Icons.person_rounded, size: 30, color: AppTheme.cyan),
+                              backgroundColor: AppTheme.forestGreen.withValues(alpha: 0.15),
+                              child: const Icon(Icons.person_rounded, size: 30, color: AppTheme.forestGreen),
                             ),
                             const SizedBox(width: 14),
                             Expanded(
@@ -1024,7 +1003,7 @@ class _ParkingDetailScreenState extends State<ParkingDetailScreen> {
                         // Host Gmail & Contact details
                         Row(
                           children: [
-                            const Icon(Icons.email_outlined, size: 16, color: AppTheme.cyan),
+                            const Icon(Icons.email_outlined, size: 16, color: AppTheme.forestGreen),
                             const SizedBox(width: 10),
                             Expanded(
                               child: Text(
@@ -1045,7 +1024,7 @@ class _ParkingDetailScreenState extends State<ParkingDetailScreen> {
                         const SizedBox(height: 8),
                         Row(
                           children: [
-                            const Icon(Icons.phone_outlined, size: 16, color: AppTheme.cyan),
+                            const Icon(Icons.phone_outlined, size: 16, color: AppTheme.forestGreen),
                             const SizedBox(width: 10),
                             Expanded(
                               child: Text(
@@ -1126,9 +1105,10 @@ class _ParkingDetailScreenState extends State<ParkingDetailScreen> {
               ),
               const SizedBox(width: 20),
               Expanded(
-                child: ElevatedButton(
+                child: NeumorphicButton(
+                  height: 48,
                   onPressed: _openBookingSheet,
-                  child: const Text('Select Time & Book'),
+                  child: const Text('Select Time & Book', style: TextStyle(fontWeight: FontWeight.w700)),
                 ),
               ),
             ],
@@ -1153,39 +1133,43 @@ class _FeatureItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 14.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(10),
+      padding: const EdgeInsets.only(bottom: 12.0),
+      child: NeumorphicCard(
+        padding: const EdgeInsets.all(12),
+        radius: 14,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppTheme.forestGreen.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, color: AppTheme.forestGreen, size: 20),
             ),
-            child: Icon(icon, color: AppTheme.cyan, size: 20),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  subtitle,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Theme.of(context).colorScheme.outline,
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Theme.of(context).colorScheme.outline,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

@@ -6,6 +6,8 @@ import 'package:parksync/l10n/app_localizations.dart';
 import '../../../core/locale_provider.dart';
 import '../../../core/theme_provider.dart';
 import '../../../shared/theme/app_theme.dart';
+import '../../../shared/widgets/neumorphic_container.dart';
+import '../../../shared/widgets/sweet_popup.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -34,7 +36,6 @@ class _HomeScreenState extends State<HomeScreen> {
       'cctv': true,
       'verified': true,
       'available': 4,
-      'accent': AppTheme.cyan,
     },
     {
       'id': 'p2',
@@ -46,7 +47,6 @@ class _HomeScreenState extends State<HomeScreen> {
       'cctv': true,
       'verified': true,
       'available': 12,
-      'accent': AppTheme.violet,
     },
     {
       'id': 'p3',
@@ -58,7 +58,6 @@ class _HomeScreenState extends State<HomeScreen> {
       'cctv': true,
       'verified': true,
       'available': 8,
-      'accent': AppTheme.amber,
     },
     {
       'id': 'p4',
@@ -70,7 +69,6 @@ class _HomeScreenState extends State<HomeScreen> {
       'cctv': false,
       'verified': true,
       'available': 18,
-      'accent': AppTheme.success,
     },
   ];
 
@@ -110,7 +108,7 @@ class _HomeScreenState extends State<HomeScreen> {
           permission == LocationPermission.denied) {
         if (mounted) {
           setState(() {
-            _currentLocationText = 'Tap to enable location';
+            _currentLocationText = 'Tap to enable GPS location';
             _isLocating = false;
           });
         }
@@ -128,6 +126,13 @@ class _HomeScreenState extends State<HomeScreen> {
               'GPS: ${position.latitude.toStringAsFixed(3)}°N, ${position.longitude.toStringAsFixed(3)}°E (Auto)';
           _isLocating = false;
         });
+
+        SweetPopup.show(
+          context,
+          title: 'Location Updated',
+          message: 'GPS synced to your current coordinates.',
+          icon: Icons.my_location_rounded,
+        );
       }
     } catch (_) {
       if (mounted) {
@@ -137,6 +142,30 @@ class _HomeScreenState extends State<HomeScreen> {
         });
       }
     }
+  }
+
+  void _toggleSaveSpot(String spotId, String spotName) {
+    setState(() {
+      if (_savedSpotIds.contains(spotId)) {
+        _savedSpotIds.remove(spotId);
+        SweetPopup.show(
+          context,
+          title: 'Removed from Favorites',
+          message: '$spotName removed from your saved spots.',
+          icon: Icons.bookmark_remove_rounded,
+          iconColor: Colors.grey,
+        );
+      } else {
+        _savedSpotIds.add(spotId);
+        SweetPopup.show(
+          context,
+          title: 'Saved to Favorites!',
+          message: '$spotName added to your favorite parking bays.',
+          icon: Icons.bookmark_added_rounded,
+          iconColor: AppTheme.amber,
+        );
+      }
+    });
   }
 
   List<Map<String, dynamic>> get _filteredSpots {
@@ -158,46 +187,38 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final isEn = l != null;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      // Fixed Top AppBar
+      // Fixed Top Neumorphic AppBar
       appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(68),
+        preferredSize: const Size.fromHeight(72),
         child: SafeArea(
           bottom: false,
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
             decoration: BoxDecoration(
               color: Theme.of(context).colorScheme.surface,
-              border: Border(
-                bottom: BorderSide(
-                  color: Theme.of(context).dividerTheme.color ?? const Color(0xFF1C2A42),
-                  width: 1,
-                ),
-              ),
+              boxShadow: AppTheme.neumorphicShadows(isDark: isDark, distance: 2, blur: 6),
             ),
             child: Row(
               children: [
-                Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(10),
-                    gradient: AppTheme.cyanGradient,
-                  ),
-                  child: const Icon(
-                    Icons.local_parking_rounded,
-                    color: Color(0xFF080B12),
-                    size: 20,
-                  ),
+                NeumorphicIconBadge(
+                  icon: Icons.local_parking_rounded,
+                  size: 40,
+                  iconSize: 22,
+                  color: isDark ? AppTheme.forestSurface : AppTheme.butterCream,
+                  iconColor: Theme.of(context).colorScheme.primary,
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: 12),
                 Text(
                   'ParkSync',
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.w800,
+                        fontWeight: FontWeight.w900,
                         letterSpacing: -0.5,
+                        fontSize: 22,
+                        color: Theme.of(context).colorScheme.primary,
                       ),
                 ),
                 const Spacer(),
@@ -207,37 +228,44 @@ class _HomeScreenState extends State<HomeScreen> {
                   valueListenable: appThemeMode,
                   builder: (context, mode, _) {
                     final isNight = mode == ThemeMode.dark;
-                    return IconButton(
-                      icon: Icon(
-                        isNight ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
-                        size: 20,
-                        color: isNight ? const Color(0xFFFFB800) : const Color(0xFF0284C7),
-                      ),
-                      onPressed: toggleThemeMode,
+                    return NeumorphicIconBadge(
+                      icon: isNight ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
+                      size: 38,
+                      iconSize: 19,
+                      iconColor: isNight ? AppTheme.amber : AppTheme.forestGreen,
+                      onTap: () {
+                        toggleThemeMode();
+                        SweetPopup.show(
+                          context,
+                          title: isNight ? 'Bright Mode Enabled' : 'Night Mode Enabled',
+                          message: isNight ? 'Warm butter theme activated.' : 'Deep forest theme activated.',
+                          icon: isNight ? Icons.wb_sunny_rounded : Icons.nightlight_round,
+                        );
+                      },
                     );
                   },
                 ),
 
+                const SizedBox(width: 8),
+
                 // Language switcher
-                IconButton(
-                  icon: Icon(
-                    Icons.language_rounded,
-                    size: 20,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                  ),
-                  onPressed: () => _showLanguageModal(context),
+                NeumorphicIconBadge(
+                  icon: Icons.language_rounded,
+                  size: 38,
+                  iconSize: 19,
+                  onTap: () => _showLanguageModal(context),
                 ),
 
-                const SizedBox(width: 4),
+                const SizedBox(width: 8),
 
                 // Profile Avatar Button
                 InkWell(
                   onTap: () => setState(() => _navIndex = 3),
                   borderRadius: BorderRadius.circular(20),
                   child: CircleAvatar(
-                    radius: 17,
-                    backgroundColor: AppTheme.cyan.withValues(alpha: 0.15),
-                    child: const Icon(Icons.person_rounded, size: 18, color: AppTheme.cyan),
+                    radius: 18,
+                    backgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
+                    child: Icon(Icons.person_rounded, size: 20, color: Theme.of(context).colorScheme.primary),
                   ),
                 ),
               ],
@@ -250,103 +278,101 @@ class _HomeScreenState extends State<HomeScreen> {
       body: IndexedStack(
         index: _navIndex,
         children: [
-          _buildExploreView(context, isEn),
-          _buildSavedView(context),
-          _buildBookingsView(context),
-          _buildProfileView(context),
+          _buildExploreView(context, isEn, isDark),
+          _buildSavedView(context, isDark),
+          _buildBookingsView(context, isDark),
+          _buildProfileView(context, isDark),
         ],
       ),
 
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _navIndex,
-        onDestinationSelected: (i) => setState(() => _navIndex = i),
-        destinations: [
-          NavigationDestination(
-            icon: const Icon(Icons.explore_outlined),
-            selectedIcon: const Icon(Icons.explore_rounded),
-            label: isEn ? l.explore : 'Explore',
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.bookmark_outline_rounded),
-            selectedIcon: const Icon(Icons.bookmark_rounded),
-            label: isEn ? l.saved : 'Saved',
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.receipt_long_outlined),
-            selectedIcon: const Icon(Icons.receipt_long_rounded),
-            label: isEn ? l.bookings : 'Bookings',
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.person_outline_rounded),
-            selectedIcon: const Icon(Icons.person_rounded),
-            label: isEn ? l.profile : 'Profile',
-          ),
-        ],
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          boxShadow: AppTheme.neumorphicShadows(isDark: isDark, distance: 3, blur: 8),
+        ),
+        child: NavigationBar(
+          selectedIndex: _navIndex,
+          onDestinationSelected: (i) => setState(() => _navIndex = i),
+          destinations: [
+            NavigationDestination(
+              icon: const Icon(Icons.explore_outlined),
+              selectedIcon: const Icon(Icons.explore_rounded),
+              label: isEn ? l.explore : 'Explore',
+            ),
+            NavigationDestination(
+              icon: const Icon(Icons.bookmark_outline_rounded),
+              selectedIcon: const Icon(Icons.bookmark_rounded),
+              label: isEn ? l.saved : 'Saved',
+            ),
+            NavigationDestination(
+              icon: const Icon(Icons.receipt_long_outlined),
+              selectedIcon: const Icon(Icons.receipt_long_rounded),
+              label: isEn ? l.bookings : 'Bookings',
+            ),
+            NavigationDestination(
+              icon: const Icon(Icons.person_outline_rounded),
+              selectedIcon: const Icon(Icons.person_rounded),
+              label: isEn ? l.profile : 'Profile',
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildExploreView(BuildContext context, bool isEn) {
+  Widget _buildExploreView(BuildContext context, bool isEn, bool isDark) {
     final spots = _filteredSpots;
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 18.0, vertical: 14.0),
+      padding: const EdgeInsets.symmetric(horizontal: 18.0, vertical: 16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Auto GPS / PIN code Banner
-          InkWell(
+          // Auto GPS / Location Neumorphic Card
+          NeumorphicCard(
             onTap: _fetchLocation,
-            borderRadius: BorderRadius.circular(12),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: AppTheme.cyan.withValues(alpha: 0.25),
-                ),
-              ),
-              child: Row(
-                children: [
-                  _isLocating
-                      ? const SizedBox(
-                          width: 14,
-                          height: 14,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation(AppTheme.cyan),
-                          ),
-                        )
-                      : const Icon(Icons.my_location_rounded, size: 16, color: AppTheme.cyan),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      _currentLocationText,
-                      style: const TextStyle(
-                        color: AppTheme.cyan,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 12,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  Text(
-                    'Refresh GPS',
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            radius: 16,
+            child: Row(
+              children: [
+                _isLocating
+                    ? SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation(Theme.of(context).colorScheme.primary),
+                        ),
+                      )
+                    : Icon(Icons.my_location_rounded, size: 18, color: Theme.of(context).colorScheme.primary),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    _currentLocationText,
                     style: TextStyle(
-                      color: Theme.of(context).colorScheme.outline,
-                      fontSize: 11,
+                      color: Theme.of(context).colorScheme.primary,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 12,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                ],
-              ),
+                ),
+                Text(
+                  'Auto-detect',
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.outline,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 11,
+                  ),
+                ),
+              ],
             ),
           ),
 
-          const SizedBox(height: 16),
+          const SizedBox(height: 18),
 
-          // Active Booking Card
+          // Active Booking Card (Neumorphic)
           _ActiveBookingCard(
             onTap: () {
               context.push('/capture-evidence',
@@ -354,35 +380,29 @@ class _HomeScreenState extends State<HomeScreen> {
             },
           ),
 
-          const SizedBox(height: 20),
+          const SizedBox(height: 22),
 
           // Interactive Search Bar (Typing works directly)
-          Container(
+          NeumorphicCard(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-            decoration: BoxDecoration(
-              color: Theme.of(context).inputDecorationTheme.fillColor,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: Theme.of(context).dividerTheme.color ?? const Color(0xFF1C2A42),
-              ),
-            ),
+            radius: 18,
             child: Row(
               children: [
-                const Icon(Icons.search_rounded, color: AppTheme.cyan, size: 22),
+                Icon(Icons.search_rounded, color: Theme.of(context).colorScheme.primary, size: 22),
                 const SizedBox(width: 10),
                 Expanded(
                   child: TextField(
                     controller: _searchCtrl,
                     style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w500,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
                       color: Theme.of(context).colorScheme.onSurface,
                     ),
                     decoration: InputDecoration(
-                      hintText: 'Where are you going?',
+                      hintText: 'Where are you driving to?',
                       hintStyle: TextStyle(
                         color: Theme.of(context).colorScheme.outline,
-                        fontSize: 14,
+                        fontSize: 13,
                       ),
                       border: InputBorder.none,
                       enabledBorder: InputBorder.none,
@@ -402,14 +422,14 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 InkWell(
                   onTap: () => context.push('/search', extra: _searchCtrl.text),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(10),
                   child: Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: AppTheme.cyan.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(8),
+                      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(10),
                     ),
-                    child: const Icon(Icons.map_rounded, color: AppTheme.cyan, size: 18),
+                    child: Icon(Icons.map_rounded, color: Theme.of(context).colorScheme.primary, size: 20),
                   ),
                 ),
               ],
@@ -420,55 +440,53 @@ class _HomeScreenState extends State<HomeScreen> {
 
           // Filter Chips
           SizedBox(
-            height: 38,
+            height: 40,
             child: ListView(
               scrollDirection: Axis.horizontal,
               children: [
-                _buildFilterChip('All'),
-                _buildFilterChip('Covered'),
-                _buildFilterChip('CCTV'),
-                _buildFilterChip('Under ₹40'),
+                _buildFilterChip('All', isDark),
+                _buildFilterChip('Covered', isDark),
+                _buildFilterChip('CCTV', isDark),
+                _buildFilterChip('Under ₹40', isDark),
               ],
             ),
           ),
 
-          const SizedBox(height: 22),
+          const SizedBox(height: 20),
 
           // Vehicle Selector Pill
-          Container(
+          NeumorphicCard(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: Theme.of(context).dividerTheme.color ?? const Color(0xFF1C2A42),
-              ),
-            ),
+            radius: 16,
             child: Row(
               children: [
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: AppTheme.cyan.withValues(alpha: 0.12),
+                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(Icons.directions_car_rounded,
-                      color: AppTheme.cyan, size: 20),
+                  child: Icon(Icons.directions_car_rounded,
+                      color: Theme.of(context).colorScheme.primary, size: 20),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 14),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Selected Vehicle', style: TextStyle(color: Colors.grey, fontSize: 11)),
+                      Text('Active Vehicle Fit',
+                          style: TextStyle(color: Theme.of(context).colorScheme.outline, fontSize: 11)),
                       Text(_vehicleDisplay,
-                          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                          style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13)),
                     ],
                   ),
                 ),
                 TextButton(
                   onPressed: () => context.push('/add-vehicle'),
-                  child: const Text('Change'),
+                  child: Text('Change',
+                      style: TextStyle(
+                          color: Theme.of(context).colorScheme.primary,
+                          fontWeight: FontWeight.w700)),
                 ),
               ],
             ),
@@ -481,12 +499,15 @@ class _HomeScreenState extends State<HomeScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Nearby Spots (${spots.length})',
+                'Available Bays (${spots.length})',
                 style: Theme.of(context).textTheme.displaySmall?.copyWith(fontSize: 18),
               ),
               TextButton(
                 onPressed: () => context.push('/search', extra: ''),
-                child: const Text('View on Map'),
+                child: Text('Open Map View',
+                    style: TextStyle(
+                        color: Theme.of(context).colorScheme.primary,
+                        fontWeight: FontWeight.w700)),
               ),
             ],
           ),
@@ -497,12 +518,15 @@ class _HomeScreenState extends State<HomeScreen> {
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             itemCount: spots.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 12),
+            separatorBuilder: (_, __) => const SizedBox(height: 14),
             itemBuilder: (context, i) {
               final spot = spots[i];
+              final isSaved = _savedSpotIds.contains(spot['id']);
               return _HomeSpotCard(
                 spot: spot,
+                isSaved: isSaved,
                 onTap: () => context.push('/parking-detail', extra: spot['id']),
+                onToggleSave: () => _toggleSaveSpot(spot['id'], spot['name']),
               );
             },
           ),
@@ -512,30 +536,48 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildFilterChip(String label) {
+  Widget _buildFilterChip(String label, bool isDark) {
     final isSelected = _selectedFilter == label;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primaryColor = Theme.of(context).colorScheme.primary;
 
     return Padding(
-      padding: const EdgeInsets.only(right: 8.0),
-      child: FilterChip(
-        label: Text(label),
-        selected: isSelected,
-        onSelected: (val) => setState(() => _selectedFilter = label),
-        selectedColor: AppTheme.cyan.withValues(alpha: isDark ? 0.2 : 0.25),
-        checkmarkColor: isDark ? AppTheme.cyan : AppTheme.cyanLight,
-        labelStyle: TextStyle(
-          color: isSelected
-              ? (isDark ? AppTheme.cyan : AppTheme.cyanLight)
-              : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
-          fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-          fontSize: 12,
+      padding: const EdgeInsets.only(right: 10.0),
+      child: GestureDetector(
+        onTap: () => setState(() => _selectedFilter = label),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 160),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? primaryColor
+                : (isDark ? AppTheme.forestSurface : AppTheme.butterCream),
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: isSelected
+                ? AppTheme.neumorphicPressedShadows(isDark: isDark)
+                : AppTheme.neumorphicShadows(isDark: isDark, distance: 2.5, blur: 6),
+            border: Border.all(
+              color: isSelected
+                  ? primaryColor
+                  : (isDark ? AppTheme.borderDark : AppTheme.borderLight),
+              width: 1,
+            ),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              color: isSelected
+                  ? (isDark ? AppTheme.forestGreenDark : AppTheme.butter)
+                  : Theme.of(context).colorScheme.onSurface,
+              fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+              fontSize: 12,
+            ),
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildSavedView(BuildContext context) {
+  Widget _buildSavedView(BuildContext context, bool isDark) {
     final savedList = _spots.where((s) => _savedSpotIds.contains(s['id'])).toList();
 
     return Padding(
@@ -543,30 +585,47 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Saved Parking', style: Theme.of(context).textTheme.displayMedium),
+          Text('Saved Parking Bays', style: Theme.of(context).textTheme.displayMedium),
           const SizedBox(height: 4),
-          Text('Your favorite parking bays for instant re-booking.',
+          Text('Your favorite parking bays for instant reservation.',
               style: Theme.of(context).textTheme.bodyMedium),
           const SizedBox(height: 20),
           Expanded(
-            child: ListView.separated(
-              itemCount: savedList.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 12),
-              itemBuilder: (context, i) {
-                final spot = savedList[i];
-                return _HomeSpotCard(
-                  spot: spot,
-                  onTap: () => context.push('/parking-detail', extra: spot['id']),
-                );
-              },
-            ),
+            child: savedList.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.bookmark_border_rounded,
+                            size: 56, color: Theme.of(context).colorScheme.outline),
+                        const SizedBox(height: 12),
+                        Text('No saved parking spots yet.',
+                            style: TextStyle(
+                                fontWeight: FontWeight.w700,
+                                color: Theme.of(context).colorScheme.outline)),
+                      ],
+                    ),
+                  )
+                : ListView.separated(
+                    itemCount: savedList.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 14),
+                    itemBuilder: (context, i) {
+                      final spot = savedList[i];
+                      return _HomeSpotCard(
+                        spot: spot,
+                        isSaved: true,
+                        onTap: () => context.push('/parking-detail', extra: spot['id']),
+                        onToggleSave: () => _toggleSaveSpot(spot['id'], spot['name']),
+                      );
+                    },
+                  ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildBookingsView(BuildContext context) {
+  Widget _buildBookingsView(BuildContext context, bool isDark) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20.0),
       child: Column(
@@ -574,7 +633,7 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           Text('My Reservations', style: Theme.of(context).textTheme.displayMedium),
           const SizedBox(height: 4),
-          Text('Live parking access codes and receipts.',
+          Text('Active parking passes, QR entry codes, and receipts.',
               style: Theme.of(context).textTheme.bodyMedium),
           const SizedBox(height: 20),
           _ActiveBookingCard(
@@ -588,27 +647,23 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildProfileView(BuildContext context) {
+  Widget _buildProfileView(BuildContext context, bool isDark) {
+    final primaryColor = Theme.of(context).colorScheme.primary;
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
+          NeumorphicCard(
             padding: const EdgeInsets.all(18),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface,
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(
-                color: Theme.of(context).dividerTheme.color ?? const Color(0xFF1C2A42),
-              ),
-            ),
+            radius: 20,
             child: Row(
               children: [
                 CircleAvatar(
                   radius: 28,
-                  backgroundColor: AppTheme.cyan.withValues(alpha: 0.15),
-                  child: const Icon(Icons.person_rounded, size: 32, color: AppTheme.cyan),
+                  backgroundColor: primaryColor.withValues(alpha: 0.15),
+                  child: Icon(Icons.person_rounded, size: 32, color: primaryColor),
                 ),
                 const SizedBox(width: 14),
                 const Expanded(
@@ -618,7 +673,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       Text('ParkSync Driver',
                           style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
                       SizedBox(height: 2),
-                      Text('+91 Verified Account • Gold Tier',
+                      Text('+91 Verified Account • Gold Driver',
                           style: TextStyle(color: Colors.grey, fontSize: 12)),
                     ],
                   ),
@@ -627,37 +682,94 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           const SizedBox(height: 24),
-          Text('Preferences',
+          Text('Appearance & Preferences',
               style: Theme.of(context).textTheme.displaySmall?.copyWith(fontSize: 18)),
           const SizedBox(height: 12),
+
+          // Theme Switcher Tile (Neumorphic)
           ValueListenableBuilder<ThemeMode>(
             valueListenable: appThemeMode,
             builder: (context, mode, _) {
               final isNight = mode == ThemeMode.dark;
-              return ListTile(
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                tileColor: Theme.of(context).colorScheme.surface,
-                leading: Icon(
-                  isNight ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
-                  color: isNight ? const Color(0xFFFFB800) : const Color(0xFF0284C7),
-                ),
-                title: const Text('Theme Mode', style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: Text(isNight ? 'Night Mode' : 'Bright Mode'),
-                trailing: Switch(
-                  value: isNight,
-                  onChanged: (val) => toggleThemeMode(),
+              return NeumorphicCard(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                radius: 16,
+                child: Row(
+                  children: [
+                    Icon(
+                      isNight ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
+                      color: isNight ? AppTheme.amber : AppTheme.forestGreen,
+                      size: 24,
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Dark Appearance',
+                              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+                          Text(
+                            isNight ? 'Active (Deep Forest Green)' : 'Inactive (Warm Butter Palette)',
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.outline,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Switch(
+                      value: isNight,
+                      activeThumbColor: AppTheme.butter,
+                      activeTrackColor: AppTheme.forestGreenLight,
+                      inactiveThumbColor: AppTheme.forestGreen,
+                      inactiveTrackColor: AppTheme.butterCream,
+                      onChanged: (val) {
+                        toggleThemeMode();
+                        SweetPopup.show(
+                          context,
+                          title: val ? 'Dark Appearance Activated' : 'Light Appearance Activated',
+                          message: val ? 'Forest palette enabled.' : 'Butter palette enabled.',
+                          icon: val ? Icons.nightlight_round : Icons.wb_sunny_rounded,
+                        );
+                      },
+                    ),
+                  ],
                 ),
               );
             },
           ),
-          const SizedBox(height: 10),
-          ListTile(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-            tileColor: Theme.of(context).colorScheme.surface,
-            leading: const Icon(Icons.language_rounded, color: AppTheme.cyan),
-            title: const Text('App Language', style: TextStyle(fontWeight: FontWeight.w600)),
-            trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14),
+
+          const SizedBox(height: 12),
+
+          NeumorphicCard(
             onTap: () => _showLanguageModal(context),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            radius: 16,
+            child: Row(
+              children: [
+                Icon(Icons.language_rounded, color: primaryColor, size: 22),
+                const SizedBox(width: 14),
+                const Expanded(
+                  child: Text('App Language',
+                      style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+                ),
+                Text(
+                  appLocale.value.languageCode == 'mr'
+                      ? 'मराठी'
+                      : appLocale.value.languageCode == 'hi'
+                          ? 'हिंदी'
+                          : 'English',
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.outline,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 12,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                const Icon(Icons.arrow_forward_ios_rounded, size: 14),
+              ],
+            ),
           ),
         ],
       ),
@@ -681,41 +793,44 @@ class _HomeScreenState extends State<HomeScreen> {
               Text(
                 'Choose Language / भाषा निवडा',
                 style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
+                      fontWeight: FontWeight.w800,
                     ),
               ),
               const SizedBox(height: 18),
               ListTile(
                 leading: const Text('🇬🇧', style: TextStyle(fontSize: 22)),
-                title: const Text('English'),
+                title: const Text('English', style: TextStyle(fontWeight: FontWeight.w700)),
                 trailing: appLocale.value.languageCode == 'en'
-                    ? const Icon(Icons.check_circle_rounded, color: AppTheme.cyan)
+                    ? Icon(Icons.check_circle_rounded, color: Theme.of(context).colorScheme.primary)
                     : null,
                 onTap: () {
                   appLocale.value = const Locale('en');
                   Navigator.pop(context);
+                  SweetPopup.show(context, message: 'Language updated to English.');
                 },
               ),
               ListTile(
                 leading: const Text('🇮🇳', style: TextStyle(fontSize: 22)),
-                title: const Text('मराठी (Marathi)'),
+                title: const Text('मराठी (Marathi)', style: TextStyle(fontWeight: FontWeight.w700)),
                 trailing: appLocale.value.languageCode == 'mr'
-                    ? const Icon(Icons.check_circle_rounded, color: AppTheme.cyan)
+                    ? Icon(Icons.check_circle_rounded, color: Theme.of(context).colorScheme.primary)
                     : null,
                 onTap: () {
                   appLocale.value = const Locale('mr');
                   Navigator.pop(context);
+                  SweetPopup.show(context, message: 'भाषा मराठी मध्ये बदलली आहे.');
                 },
               ),
               ListTile(
                 leading: const Text('🇮🇳', style: TextStyle(fontSize: 22)),
-                title: const Text('हिंदी (Hindi)'),
+                title: const Text('हिंदी (Hindi)', style: TextStyle(fontWeight: FontWeight.w700)),
                 trailing: appLocale.value.languageCode == 'hi'
-                    ? const Icon(Icons.check_circle_rounded, color: AppTheme.cyan)
+                    ? Icon(Icons.check_circle_rounded, color: Theme.of(context).colorScheme.primary)
                     : null,
                 onTap: () {
                   appLocale.value = const Locale('hi');
                   Navigator.pop(context);
+                  SweetPopup.show(context, message: 'भाषा हिन्दी में बदल दी गई है।');
                 },
               ),
               const SizedBox(height: 12),
@@ -733,6 +848,8 @@ class _ActiveBookingCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(20),
@@ -740,73 +857,56 @@ class _ActiveBookingCard extends StatelessWidget {
         width: double.infinity,
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFF00D4FF), Color(0xFF0088CC)],
-          ),
+          color: isDark ? AppTheme.forestElevated : AppTheme.forestGreen,
           borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: AppTheme.cyan.withValues(alpha: 0.25),
-              blurRadius: 18,
-              offset: const Offset(0, 6),
-            ),
-          ],
+          boxShadow: AppTheme.neumorphicShadows(isDark: isDark, distance: 5, blur: 14),
         ),
         child: Row(
           children: [
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.15),
+                color: AppTheme.butter.withValues(alpha: 0.15),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.local_parking_rounded, color: Colors.black, size: 26),
+              child: const Icon(Icons.local_parking_rounded, color: AppTheme.butter, size: 26),
             ),
             const SizedBox(width: 16),
-            Expanded(
+            const Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
-                      Container(
-                        width: 8,
-                        height: 8,
-                        decoration: const BoxDecoration(
-                          color: Colors.black,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      const Text(
-                        'ACTIVE SESSION',
+                      Icon(Icons.sensors_rounded, color: AppTheme.butter, size: 14),
+                      SizedBox(width: 6),
+                      Text(
+                        'ACTIVE PASS #BK-492',
                         style: TextStyle(
-                          color: Colors.black,
+                          color: AppTheme.butter,
                           fontWeight: FontWeight.w800,
-                          fontSize: 12,
-                          letterSpacing: 0.5,
+                          fontSize: 11,
+                          letterSpacing: 0.6,
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 4),
-                  const Text(
-                    'Bay A4 • Reserved',
+                  SizedBox(height: 4),
+                  Text(
+                    'Bay A4 • Spot Reserved',
                     style: TextStyle(
-                      color: Colors.black,
+                      color: AppTheme.butter,
                       fontWeight: FontWeight.w800,
-                      fontSize: 17,
+                      fontSize: 16,
                     ),
                   ),
-                  const SizedBox(height: 2),
+                  SizedBox(height: 2),
                   Text(
                     'Tap to capture security evidence photo',
                     style: TextStyle(
-                      color: Colors.black.withValues(alpha: 0.75),
+                      color: Color(0xFFD3E5E0),
                       fontWeight: FontWeight.w500,
-                      fontSize: 13,
+                      fontSize: 12,
                     ),
                   ),
                 ],
@@ -815,10 +915,10 @@ class _ActiveBookingCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.12),
+                color: AppTheme.butter.withValues(alpha: 0.18),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.arrow_forward_ios_rounded, color: Colors.black, size: 14),
+              child: const Icon(Icons.arrow_forward_ios_rounded, color: AppTheme.butter, size: 14),
             ),
           ],
         ),
@@ -829,90 +929,96 @@ class _ActiveBookingCard extends StatelessWidget {
 
 class _HomeSpotCard extends StatelessWidget {
   final Map<String, dynamic> spot;
+  final bool isSaved;
   final VoidCallback onTap;
+  final VoidCallback onToggleSave;
 
-  const _HomeSpotCard({required this.spot, required this.onTap});
+  const _HomeSpotCard({
+    required this.spot,
+    required this.isSaved,
+    required this.onTap,
+    required this.onToggleSave,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = spot['accent'] as Color;
+    final primaryColor = Theme.of(context).colorScheme.primary;
 
-    return InkWell(
+    return NeumorphicCard(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: Theme.of(context).dividerTheme.color ?? const Color(0xFF1C2A42),
+      padding: const EdgeInsets.all(16),
+      radius: 18,
+      child: Row(
+        children: [
+          Container(
+            width: 46,
+            height: 46,
+            decoration: BoxDecoration(
+              color: primaryColor.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Icon(Icons.local_parking_rounded, color: primaryColor, size: 24),
           ),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: accent.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(Icons.local_parking_rounded, color: accent, size: 22),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    spot['name'],
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    '${spot['distance']} km away • ${spot['available']} spots open',
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.outline,
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '₹${spot['rate']}/hr',
-                  style: TextStyle(
-                    color: accent,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 16,
-                  ),
+                  spot['name'],
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 14,
+                      ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 2),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: AppTheme.success.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: const Text(
-                    'Verified ✓',
-                    style: TextStyle(
-                      color: AppTheme.success,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                    ),
+                const SizedBox(height: 3),
+                Text(
+                  '${spot['distance']} km away • ${spot['available']} bays free',
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.outline,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ],
             ),
-          ],
-        ),
+          ),
+          const SizedBox(width: 8),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                '₹${spot['rate']}/hr',
+                style: TextStyle(
+                  color: primaryColor,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 16,
+                ),
+              ),
+              const SizedBox(height: 4),
+              GestureDetector(
+                onTap: onToggleSave,
+                behavior: HitTestBehavior.opaque,
+                child: Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: isSaved
+                        ? AppTheme.amber.withValues(alpha: 0.15)
+                        : Theme.of(context).colorScheme.surfaceContainerHighest,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    isSaved ? Icons.bookmark_rounded : Icons.bookmark_outline_rounded,
+                    size: 16,
+                    color: isSaved ? AppTheme.amber : Theme.of(context).colorScheme.outline,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

@@ -4,6 +4,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../core/api_client.dart';
 import '../../../../shared/theme/app_theme.dart';
 import '../../../../shared/widgets/car_loading_indicator.dart';
+import '../../../../shared/widgets/neumorphic_container.dart';
+import '../../../../shared/widgets/sweet_popup.dart';
 
 class AddVehicleScreen extends StatefulWidget {
   const AddVehicleScreen({super.key});
@@ -146,7 +148,17 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
 
     if (mounted) {
       setState(() => _isLoading = false);
-      context.go('/home');
+      SweetPopup.show(
+        context,
+        title: 'Vehicle Saved!',
+        message: '$fullName registered for bay fitting.',
+        icon: Icons.directions_car_rounded,
+        iconColor: AppTheme.forestGreen,
+      );
+      await Future.delayed(const Duration(milliseconds: 600));
+      if (mounted) {
+        context.go('/home');
+      }
     }
   }
 
@@ -156,15 +168,27 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
     final availableModels =
         _vehicleModels.where((m) => m['make'] == _selectedMake).toList();
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text('Add Your Vehicle'),
+        title: Text(
+          'Add Your Vehicle',
+          style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize: 18),
+        ),
         backgroundColor: Colors.transparent,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
-          onPressed: () => context.pop(),
+        leading: Padding(
+          padding: const EdgeInsets.only(left: 12.0),
+          child: Center(
+            child: NeumorphicIconBadge(
+              icon: Icons.arrow_back_ios_new_rounded,
+              size: 38,
+              iconSize: 18,
+              onTap: () => context.pop(),
+            ),
+          ),
         ),
       ),
       body: SafeArea(
@@ -177,19 +201,19 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                 decoration: BoxDecoration(
-                  color: AppTheme.cyan.withValues(alpha: 0.12),
+                  color: AppTheme.forestGreen.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppTheme.cyan.withValues(alpha: 0.3)),
+                  border: Border.all(color: AppTheme.forestGreen.withValues(alpha: 0.3)),
                 ),
-                child: const Row(
+                child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.directions_car_rounded, size: 14, color: AppTheme.cyan),
-                    SizedBox(width: 6),
+                    const Icon(Icons.directions_car_rounded, size: 14, color: AppTheme.forestGreen),
+                    const SizedBox(width: 6),
                     Text(
                       'Vehicle Fit Verification',
                       style: TextStyle(
-                        color: AppTheme.cyan,
+                        color: isDark ? AppTheme.butter : AppTheme.forestGreen,
                         fontSize: 11,
                         fontWeight: FontWeight.w700,
                       ),
@@ -303,11 +327,12 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
               const Spacer(),
 
               // Submit Button
-              ElevatedButton(
+              NeumorphicButton(
+                height: 50,
                 onPressed: _isLoading ? null : _saveVehicle,
                 child: _isLoading
-                    ? const CarLoadingIndicator(size: 28, color: Colors.black)
-                    : const Text('Save & Continue'),
+                    ? const CarLoadingIndicator(size: 28, color: Colors.white)
+                    : const Text('Save & Continue', style: TextStyle(fontWeight: FontWeight.w700)),
               ),
               const SizedBox(height: 16),
             ],

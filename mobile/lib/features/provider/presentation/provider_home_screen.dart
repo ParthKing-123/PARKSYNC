@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../../shared/theme/app_theme.dart';
+import '../../../shared/widgets/neumorphic_container.dart';
 import './provider_bookings_screen.dart';
 
 class ProviderHomeScreen extends StatefulWidget {
@@ -60,15 +62,28 @@ class _ProviderDashboardView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text('Your Dashboard'),
+        title: Text(
+          'Host Dashboard',
+          style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize: 18),
+        ),
         backgroundColor: Colors.transparent,
         elevation: 0,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.exit_to_app),
-            onPressed: () => context.go('/home'),
+          Padding(
+            padding: const EdgeInsets.only(right: 14.0),
+            child: Center(
+              child: NeumorphicIconBadge(
+                icon: Icons.exit_to_app_rounded,
+                size: 38,
+                iconSize: 18,
+                onTap: () => context.go('/home'),
+              ),
+            ),
           )
         ],
       ),
@@ -79,21 +94,9 @@ class _ProviderDashboardView extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Earnings Summary
-              Container(
-                width: double.infinity,
+              NeumorphicCard(
                 padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
-                      Theme.of(context).colorScheme.surface,
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5)),
-                ),
+                radius: 20,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -102,15 +105,21 @@ class _ProviderDashboardView extends StatelessWidget {
                     Text(
                       '₹0.00',
                       style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                            color: Theme.of(context).colorScheme.primary,
+                            color: isDark ? AppTheme.butter : AppTheme.forestGreen,
+                            fontSize: 36,
                           ),
                     ),
                     const SizedBox(height: 16),
                     Row(
                       children: [
-                        const Icon(Icons.info_outline, size: 16, color: Colors.grey),
+                        Icon(Icons.info_outline, size: 16, color: Theme.of(context).colorScheme.outline),
                         const SizedBox(width: 8),
-                        Text('Verification pending. Listings are not live.', style: Theme.of(context).textTheme.bodySmall),
+                        Expanded(
+                          child: Text(
+                            'Verification pending. Listings are not live.',
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ),
                       ],
                     )
                   ],
@@ -119,47 +128,46 @@ class _ProviderDashboardView extends StatelessWidget {
               const SizedBox(height: 32),
               Text(
                 'Your Listings',
-                style: Theme.of(context).textTheme.displayMedium?.copyWith(fontSize: 20),
+                style: Theme.of(context).textTheme.displaySmall?.copyWith(fontSize: 20),
               ),
               const SizedBox(height: 16),
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 60,
-                        height: 60,
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.05),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Icon(Icons.local_parking),
+              NeumorphicCard(
+                radius: 18,
+                padding: const EdgeInsets.all(16.0),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 56,
+                      height: 56,
+                      decoration: BoxDecoration(
+                        color: AppTheme.forestGreen.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('Central Commercial Parking', style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold)),
-                            const SizedBox(height: 4),
-                            const Text('₹40/hr • 10 Spaces'),
-                          ],
-                        ),
+                      child: const Icon(Icons.local_parking_rounded, color: AppTheme.forestGreen, size: 28),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Central Commercial Parking', style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 4),
+                          Text('₹40/hr • 10 Spaces', style: TextStyle(color: Theme.of(context).colorScheme.outline, fontSize: 13)),
+                        ],
                       ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.error.withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          'PENDING',
-                          style: TextStyle(color: Theme.of(context).colorScheme.error, fontSize: 12, fontWeight: FontWeight.bold),
-                        ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppTheme.amber.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(6),
                       ),
-                    ],
-                  ),
+                      child: const Text(
+                        'PENDING',
+                        style: TextStyle(color: AppTheme.amber, fontSize: 11, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],

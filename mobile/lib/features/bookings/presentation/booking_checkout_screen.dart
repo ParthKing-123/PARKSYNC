@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../shared/theme/app_theme.dart';
+import '../../../shared/widgets/neumorphic_container.dart';
+import '../../../shared/widgets/sweet_popup.dart';
 
 class BookingCheckoutScreen extends StatefulWidget {
   final Object? bookingData;
@@ -28,9 +30,16 @@ class _BookingCheckoutScreenState extends State<BookingCheckoutScreen> {
     if (!mounted) return;
 
     setState(() => _approvalState = 'APPROVED');
+    SweetPopup.show(
+      context,
+      title: 'Booking Approved!',
+      message: 'Host has accepted your parking bay reservation.',
+      icon: Icons.check_circle_rounded,
+      iconColor: AppTheme.success,
+    );
 
     // 3. Navigate to confirmation screen
-    await Future.delayed(const Duration(milliseconds: 900));
+    await Future.delayed(const Duration(milliseconds: 1100));
     if (!mounted) return;
 
     context.push(
@@ -83,15 +92,9 @@ class _BookingCheckoutScreenState extends State<BookingCheckoutScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Spot & Custom Time Card
-              Container(
+              NeumorphicCard(
                 padding: const EdgeInsets.all(18),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surface,
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(
-                    color: Theme.of(context).dividerTheme.color ?? const Color(0xFF1C2A42),
-                  ),
-                ),
+                radius: 18,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -127,7 +130,7 @@ class _BookingCheckoutScreenState extends State<BookingCheckoutScreen> {
                     const SizedBox(height: 10),
                     Row(
                       children: [
-                        const Icon(Icons.calendar_today_rounded, size: 15, color: AppTheme.cyan),
+                        const Icon(Icons.calendar_today_rounded, size: 15, color: AppTheme.forestGreen),
                         const SizedBox(width: 8),
                         Text(
                           date,
@@ -138,7 +141,7 @@ class _BookingCheckoutScreenState extends State<BookingCheckoutScreen> {
                     const SizedBox(height: 6),
                     Row(
                       children: [
-                        const Icon(Icons.access_time_rounded, size: 15, color: AppTheme.cyan),
+                        const Icon(Icons.access_time_rounded, size: 15, color: AppTheme.forestGreen),
                         const SizedBox(width: 8),
                         Text(
                           '$slot ($duration)',
@@ -158,27 +161,16 @@ class _BookingCheckoutScreenState extends State<BookingCheckoutScreen> {
 
               // Host Approval Status Banner
               if (_approvalState != 'IDLE')
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 300),
+                NeumorphicCard(
+                  radius: 16,
                   padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: _approvalState == 'APPROVED'
-                        ? AppTheme.success.withValues(alpha: 0.15)
-                        : AppTheme.cyan.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: _approvalState == 'APPROVED'
-                          ? AppTheme.success
-                          : AppTheme.cyan,
-                    ),
-                  ),
                   child: Row(
                     children: [
                       if (_approvalState == 'SENDING') ...[
                         const SizedBox(
                           width: 22,
                           height: 22,
-                          child: CircularProgressIndicator(strokeWidth: 2.5, color: AppTheme.cyan),
+                          child: CircularProgressIndicator(strokeWidth: 2.5, color: AppTheme.forestGreen),
                         ),
                         const SizedBox(width: 14),
                         const Expanded(
@@ -191,7 +183,7 @@ class _BookingCheckoutScreenState extends State<BookingCheckoutScreen> {
                         const SizedBox(
                           width: 22,
                           height: 22,
-                          child: CircularProgressIndicator(strokeWidth: 2.5, color: AppTheme.cyan),
+                          child: CircularProgressIndicator(strokeWidth: 2.5, color: AppTheme.forestGreen),
                         ),
                         const SizedBox(width: 14),
                         const Expanded(
@@ -241,15 +233,9 @@ class _BookingCheckoutScreenState extends State<BookingCheckoutScreen> {
               const SizedBox(height: 18),
 
               // Payment Summary
-              Container(
+              NeumorphicCard(
                 padding: const EdgeInsets.all(18),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surface,
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(
-                    color: Theme.of(context).dividerTheme.color ?? const Color(0xFF1C2A42),
-                  ),
-                ),
+                radius: 18,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -274,7 +260,7 @@ class _BookingCheckoutScreenState extends State<BookingCheckoutScreen> {
                         Text(
                           totalAmount,
                           style: TextStyle(
-                            color: isDark ? AppTheme.cyan : AppTheme.cyanLight,
+                            color: isDark ? AppTheme.butter : AppTheme.forestGreen,
                             fontWeight: FontWeight.w900,
                             fontSize: 19,
                           ),
@@ -288,15 +274,12 @@ class _BookingCheckoutScreenState extends State<BookingCheckoutScreen> {
               const SizedBox(height: 18),
 
               // Host Guarantee Banner
-              Container(
+              NeumorphicCard(
                 padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                  borderRadius: BorderRadius.circular(14),
-                ),
+                radius: 14,
                 child: Row(
                   children: [
-                    const Icon(Icons.security_rounded, size: 20, color: AppTheme.cyan),
+                    const Icon(Icons.security_rounded, size: 20, color: AppTheme.forestGreen),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
@@ -315,16 +298,17 @@ class _BookingCheckoutScreenState extends State<BookingCheckoutScreen> {
               const Spacer(),
 
               // Submit Button
-              ElevatedButton(
+              NeumorphicButton(
+                height: 50,
                 onPressed: _approvalState == 'IDLE'
                     ? () => _sendRequestToHost(parkingName, totalAmount, date, slot, duration)
                     : null,
                 child: _approvalState == 'IDLE'
-                    ? Text('Send Booking Request to Host • $totalAmount')
+                    ? Text('Send Booking Request to Host • $totalAmount', style: const TextStyle(fontWeight: FontWeight.w700))
                     : const SizedBox(
                         width: 22,
                         height: 22,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black),
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                       ),
               ),
               const SizedBox(height: 16),

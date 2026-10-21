@@ -74,7 +74,7 @@ Future<Country?> showCountryPickerDialog({
   return showModalBottomSheet<Country>(
     context: context,
     isScrollControlled: true,
-    backgroundColor: AppTheme.bgSurface,
+    backgroundColor: Theme.of(context).colorScheme.surface,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
     ),
@@ -123,19 +123,26 @@ class _CountryPickerSheetState extends State<_CountryPickerSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primaryColor = Theme.of(context).colorScheme.primary;
+
     return Container(
       height: MediaQuery.sizeOf(context).height * 0.75,
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Drag handle
           Center(
             child: Container(
-              width: 36,
+              width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: AppTheme.textMuted.withValues(alpha: 0.5),
+                color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.4),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -144,7 +151,7 @@ class _CountryPickerSheetState extends State<_CountryPickerSheet> {
           Text(
             'Select Country / Region',
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w800,
                 ),
           ),
           const SizedBox(height: 16),
@@ -153,7 +160,7 @@ class _CountryPickerSheetState extends State<_CountryPickerSheet> {
             controller: _searchCtrl,
             decoration: InputDecoration(
               hintText: 'Search country or code...',
-              prefixIcon: const Icon(Icons.search, color: AppTheme.cyan, size: 20),
+              prefixIcon: Icon(Icons.search, color: primaryColor, size: 20),
               suffixIcon: _searchCtrl.text.isNotEmpty
                   ? IconButton(
                       icon: const Icon(Icons.clear, size: 18),
@@ -168,9 +175,10 @@ class _CountryPickerSheetState extends State<_CountryPickerSheet> {
           Expanded(
             child: ListView.separated(
               itemCount: _filtered.length,
-              separatorBuilder: (_, __) => const Divider(
+              separatorBuilder: (_, __) => Divider(
                 height: 1,
-                color: Color(0xFF1C2A42),
+                color: Theme.of(context).dividerTheme.color ??
+                    (isDark ? AppTheme.borderDark : AppTheme.borderLight),
               ),
               itemBuilder: (context, i) {
                 final country = _filtered[i];
@@ -178,8 +186,15 @@ class _CountryPickerSheetState extends State<_CountryPickerSheet> {
 
                 return InkWell(
                   onTap: () => Navigator.pop(context, country),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    decoration: isSelected
+                        ? BoxDecoration(
+                            color: primaryColor.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          )
+                        : null,
+                    padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
                     child: Row(
                       children: [
                         Text(country.flag, style: const TextStyle(fontSize: 24)),
@@ -189,10 +204,10 @@ class _CountryPickerSheetState extends State<_CountryPickerSheet> {
                             country.name,
                             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                                   fontWeight:
-                                      isSelected ? FontWeight.w700 : FontWeight.w500,
+                                      isSelected ? FontWeight.w800 : FontWeight.w500,
                                   color: isSelected
-                                      ? AppTheme.cyan
-                                      : AppTheme.textPrimary,
+                                      ? primaryColor
+                                      : Theme.of(context).colorScheme.onSurface,
                                 ),
                           ),
                         ),
@@ -200,14 +215,14 @@ class _CountryPickerSheetState extends State<_CountryPickerSheet> {
                           country.dialCode,
                           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                 color: isSelected
-                                    ? AppTheme.cyan
-                                    : AppTheme.textSecondary,
-                                fontWeight: FontWeight.w600,
+                                    ? primaryColor
+                                    : Theme.of(context).colorScheme.outline,
+                                fontWeight: FontWeight.w700,
                               ),
                         ),
                         if (isSelected) ...[
                           const SizedBox(width: 8),
-                          const Icon(Icons.check, color: AppTheme.cyan, size: 18),
+                          Icon(Icons.check_circle_rounded, color: primaryColor, size: 18),
                         ],
                       ],
                     ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../shared/theme/app_theme.dart';
+import '../../../shared/widgets/neumorphic_container.dart';
 
 class BookingConfirmationScreen extends StatelessWidget {
   final Object? bookingData;
@@ -81,15 +82,9 @@ class BookingConfirmationScreen extends StatelessWidget {
               const SizedBox(height: 28),
 
               // Booking Pass Details Card
-              Container(
+              NeumorphicCard(
                 padding: const EdgeInsets.all(18),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surface,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: Theme.of(context).dividerTheme.color ?? const Color(0xFF1C2A42),
-                  ),
-                ),
+                radius: 20,
                 child: Column(
                   children: [
                     Row(
@@ -135,27 +130,21 @@ class BookingConfirmationScreen extends StatelessWidget {
               const SizedBox(height: 24),
 
               // QR Code Card for Entry
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.15),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
+              NeumorphicCard(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                radius: 18,
                 child: Column(
                   children: [
-                    const Icon(Icons.qr_code_2_rounded, size: 100, color: Colors.black),
-                    const SizedBox(height: 4),
+                    Icon(
+                      Icons.qr_code_2_rounded,
+                      size: 96,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                    const SizedBox(height: 6),
                     Text(
                       'Scan at entry barrier to open bay gate',
                       style: TextStyle(
-                        color: Colors.black.withValues(alpha: 0.7),
+                        color: Theme.of(context).colorScheme.outline,
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
                       ),
@@ -170,21 +159,23 @@ class BookingConfirmationScreen extends StatelessWidget {
               Row(
                 children: [
                   Expanded(
-                    child: OutlinedButton(
+                    child: NeumorphicButton(
+                      height: 48,
                       onPressed: () {
                         context.push(
                           '/capture-evidence',
                           extra: {'bookingId': bookingRef, 'type': 'BEFORE'},
                         );
                       },
-                      child: const Text('Capture Photo', style: TextStyle(fontSize: 13)),
+                      child: const Text('Capture Photo', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: ElevatedButton(
+                    child: NeumorphicButton(
+                      height: 48,
                       onPressed: () => context.go('/home'),
-                      child: const Text('Go to Home', style: TextStyle(fontSize: 13)),
+                      child: const Text('Go to Home', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
                     ),
                   ),
                 ],

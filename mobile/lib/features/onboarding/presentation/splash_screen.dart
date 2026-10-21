@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:go_router/go_router.dart';
+import '../../../shared/theme/app_theme.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -19,7 +20,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
   @override
   void initState() {
     super.initState();
-    
+
     _mainController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 2500),
@@ -58,7 +59,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
     );
 
     _mainController.forward().then((_) {
-      Future.delayed(const Duration(milliseconds: 500), () {
+      Future.delayed(const Duration(milliseconds: 600), () {
         if (mounted) context.go('/guest-home');
       });
     });
@@ -72,7 +73,10 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: Center(
         child: AnimatedBuilder(
           animation: _mainController,
@@ -103,16 +107,42 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
+                          Container(
+                            width: 88,
+                            height: 88,
+                            decoration: BoxDecoration(
+                              color: isDark ? AppTheme.forestSurface : AppTheme.butterCream,
+                              shape: BoxShape.circle,
+                              boxShadow: AppTheme.neumorphicShadows(isDark: isDark, distance: 6, blur: 16),
+                              border: Border.all(
+                                color: isDark ? AppTheme.forestHighlight : AppTheme.butterHighlight,
+                                width: 1.5,
+                              ),
+                            ),
+                            child: Center(
+                              child: Icon(
+                                Icons.local_parking_rounded,
+                                size: 48,
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 20),
                           Text(
                             'ParkSync',
                             style: Theme.of(context).textTheme.displayLarge?.copyWith(
                                   color: Theme.of(context).colorScheme.primary,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: -0.5,
                                 ),
                           ),
-                          const SizedBox(height: 16),
+                          const SizedBox(height: 8),
                           Text(
-                            'Parking made simple.',
-                            style: Theme.of(context).textTheme.bodyLarge,
+                            'Smart Parking Marketplace for India',
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                  letterSpacing: 0.2,
+                                ),
                           ),
                         ],
                       ),

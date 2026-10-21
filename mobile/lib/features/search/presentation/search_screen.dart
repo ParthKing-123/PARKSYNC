@@ -6,6 +6,8 @@ import 'package:go_router/go_router.dart';
 import 'package:dio/dio.dart';
 import 'package:parksync/l10n/app_localizations.dart';
 import '../../../shared/theme/app_theme.dart';
+import '../../../shared/widgets/neumorphic_container.dart';
+import '../../../shared/widgets/sweet_popup.dart';
 
 class SearchParkingSpot {
   final String id;
@@ -204,24 +206,11 @@ class _SearchScreenState extends State<SearchScreen> {
         _mapController.move(userLatLng, 15.5);
 
         if (!silent) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              behavior: SnackBarBehavior.floating,
-              backgroundColor: AppTheme.success,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              content: Row(
-                children: [
-                  const Icon(Icons.my_location_rounded, color: Colors.white, size: 18),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Location auto-detected: $detectedArea',
-                      style: const TextStyle(fontWeight: FontWeight.w700),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+          SweetPopup.show(
+            context,
+            title: 'Location Detected',
+            message: 'Auto-detected: $detectedArea',
+            icon: Icons.my_location_rounded,
           );
         }
       }
@@ -229,11 +218,12 @@ class _SearchScreenState extends State<SearchScreen> {
       if (mounted) {
         setState(() => _isDetectingGps = false);
         if (!silent) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              behavior: SnackBarBehavior.floating,
-              content: Text('Could not auto-detect location: $e'),
-            ),
+          SweetPopup.show(
+            context,
+            title: 'Location Error',
+            message: 'Could not auto-detect location: $e',
+            icon: Icons.location_off_rounded,
+            iconColor: AppTheme.error,
           );
         }
       }
@@ -515,18 +505,18 @@ class _SearchScreenState extends State<SearchScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
                 color: isSelected
-                    ? AppTheme.cyan
-                    : (isDark ? const Color(0xFF0F1420) : Colors.white),
+                    ? AppTheme.forestGreen
+                    : (isDark ? AppTheme.forestSurface : AppTheme.butterCream),
                 borderRadius: BorderRadius.circular(22),
                 border: Border.all(
-                  color: isSelected ? Colors.white : AppTheme.cyan,
+                  color: isSelected ? AppTheme.butter : AppTheme.forestGreen,
                   width: isSelected ? 2.5 : 1.5,
                 ),
                 boxShadow: [
                   BoxShadow(
                     color: isSelected
-                        ? AppTheme.cyan.withValues(alpha: 0.5)
-                        : Colors.black.withValues(alpha: 0.3),
+                        ? AppTheme.forestGreen.withValues(alpha: 0.5)
+                        : Colors.black.withValues(alpha: 0.2),
                     blurRadius: isSelected ? 12 : 6,
                     offset: const Offset(0, 3),
                   ),
@@ -537,7 +527,7 @@ class _SearchScreenState extends State<SearchScreen> {
                 children: [
                   Icon(
                     Icons.local_parking_rounded,
-                    color: isSelected ? Colors.black : AppTheme.cyan,
+                    color: isSelected ? AppTheme.butter : AppTheme.forestGreen,
                     size: 16,
                   ),
                   const SizedBox(width: 4),
@@ -546,7 +536,7 @@ class _SearchScreenState extends State<SearchScreen> {
                     style: TextStyle(
                       fontWeight: FontWeight.w800,
                       fontSize: 12,
-                      color: isSelected ? Colors.black : (isDark ? Colors.white : Colors.black),
+                      color: isSelected ? AppTheme.butter : (isDark ? AppTheme.butter : AppTheme.forestGreen),
                     ),
                   ),
                 ],
@@ -609,42 +599,27 @@ class _SearchScreenState extends State<SearchScreen> {
                 children: [
                   Row(
                     children: [
-                      CircleAvatar(
-                        backgroundColor: Theme.of(context).colorScheme.surface,
-                        child: IconButton(
-                          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
-                          onPressed: () => context.pop(),
-                          color: Theme.of(context).colorScheme.onSurface,
-                        ),
+                      NeumorphicIconBadge(
+                        icon: Icons.arrow_back_ios_new_rounded,
+                        size: 44,
+                        iconSize: 18,
+                        onTap: () => context.pop(),
                       ),
                       const SizedBox(width: 8),
                       Expanded(
-                        child: Container(
+                        child: NeumorphicCard(
                           padding: const EdgeInsets.symmetric(horizontal: 12),
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.surface,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: Theme.of(context).dividerTheme.color ?? const Color(0xFF1C2A42),
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: isDark ? 0.35 : 0.08),
-                                blurRadius: 10,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                          ),
+                          radius: 16,
                           child: Row(
                             children: [
                               if (_isSearchingLocation)
                                 const SizedBox(
                                   width: 18,
                                   height: 18,
-                                  child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.cyan),
+                                  child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.forestGreen),
                                 )
                               else
-                                const Icon(Icons.search_rounded, size: 20, color: AppTheme.cyan),
+                                const Icon(Icons.search_rounded, size: 20, color: AppTheme.forestGreen),
                               const SizedBox(width: 8),
                               Expanded(
                                 child: TextField(
@@ -678,7 +653,7 @@ class _SearchScreenState extends State<SearchScreen> {
                                   },
                                 ),
                               IconButton(
-                                icon: const Icon(Icons.arrow_forward_rounded, size: 18, color: AppTheme.cyan),
+                                icon: const Icon(Icons.arrow_forward_rounded, size: 18, color: AppTheme.forestGreen),
                                 tooltip: 'Search location on OpenStreetMap',
                                 onPressed: () => _searchOpenStreetMap(_searchCtrl.text),
                               ),
@@ -687,13 +662,12 @@ class _SearchScreenState extends State<SearchScreen> {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      CircleAvatar(
-                        backgroundColor: Theme.of(context).colorScheme.surface,
-                        child: IconButton(
-                          icon: const Icon(Icons.tune_rounded, size: 20),
-                          onPressed: _showFilters,
-                          color: AppTheme.cyan,
-                        ),
+                      NeumorphicIconBadge(
+                        icon: Icons.tune_rounded,
+                        size: 44,
+                        iconSize: 20,
+                        iconColor: AppTheme.forestGreen,
+                        onTap: _showFilters,
                       ),
                     ],
                   ),
@@ -703,48 +677,32 @@ class _SearchScreenState extends State<SearchScreen> {
                   // Quick Auto-Detect Location Pill Button
                   Row(
                     children: [
-                      const SizedBox(width: 48),
-                      InkWell(
+                      const SizedBox(width: 52),
+                      NeumorphicCard(
                         onTap: _isDetectingGps ? null : () => _detectCurrentLocation(),
-                        borderRadius: BorderRadius.circular(20),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.surface,
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: AppTheme.cyan.withValues(alpha: 0.4),
+                        radius: 20,
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (_isDetectingGps)
+                              const SizedBox(
+                                width: 12,
+                                height: 12,
+                                child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.forestGreen),
+                              )
+                            else
+                              const Icon(Icons.my_location_rounded, size: 13, color: AppTheme.forestGreen),
+                            const SizedBox(width: 6),
+                            Text(
+                              _isDetectingGps ? 'Detecting GPS location...' : 'Auto-detect my location',
+                              style: TextStyle(
+                                color: isDark ? AppTheme.butter : AppTheme.forestGreen,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                              ),
                             ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.15),
-                                blurRadius: 6,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              if (_isDetectingGps)
-                                const SizedBox(
-                                  width: 12,
-                                  height: 12,
-                                  child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.cyan),
-                                )
-                              else
-                                const Icon(Icons.my_location_rounded, size: 13, color: AppTheme.cyan),
-                              const SizedBox(width: 6),
-                              Text(
-                                _isDetectingGps ? 'Detecting GPS location...' : 'Auto-detect my location',
-                                style: TextStyle(
-                                  color: isDark ? AppTheme.cyan : AppTheme.cyanLight,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ],
-                          ),
+                          ],
                         ),
                       ),
                     ],
@@ -931,158 +889,107 @@ class _SearchScreenState extends State<SearchScreen> {
     bool isAccent = false,
     bool isLoading = false,
   }) {
-    return Container(
-      width: 44,
-      height: 44,
-      decoration: BoxDecoration(
-        color: isAccent ? AppTheme.cyan : Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: isAccent ? AppTheme.cyan : (Theme.of(context).dividerTheme.color ?? const Color(0xFF1C2A42)),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.3),
-            blurRadius: 8,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: IconButton(
-        padding: EdgeInsets.zero,
-        icon: isLoading
-            ? const SizedBox(
-                width: 18,
-                height: 18,
-                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black),
-              )
-            : Icon(
-                icon,
-                color: isAccent ? Colors.black : Theme.of(context).colorScheme.onSurface,
-                size: 22,
-              ),
-        tooltip: tooltip,
-        onPressed: onPressed,
-      ),
+    return NeumorphicIconBadge(
+      icon: icon,
+      size: 46,
+      iconSize: 22,
+      iconColor: isAccent
+          ? (Theme.of(context).brightness == Brightness.dark ? AppTheme.butter : AppTheme.forestGreen)
+          : Theme.of(context).colorScheme.primary,
+      onTap: onPressed,
     );
   }
 
   Widget _buildSearchCard(BuildContext context, SearchParkingSpot spot, bool isDark, bool isSelected) {
-    return Container(
+    return SizedBox(
       width: 290,
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: isSelected
-              ? AppTheme.cyan
-              : (Theme.of(context).dividerTheme.color ?? const Color(0xFF1C2A42)),
-          width: isSelected ? 2.0 : 1.0,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: isSelected
-                ? AppTheme.cyan.withValues(alpha: 0.25)
-                : Colors.black.withValues(alpha: isDark ? 0.35 : 0.08),
-            blurRadius: isSelected ? 16 : 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: InkWell(
+      child: NeumorphicCard(
+        radius: 18,
+        padding: const EdgeInsets.all(14.0),
         onTap: () {
           setState(() => _selectedSpotId = spot.id);
           _mapController.move(spot.position, 16.0);
         },
-        borderRadius: BorderRadius.circular(18),
-        child: Padding(
-          padding: const EdgeInsets.all(14.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Text(
-                      spot.name,
-                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                            fontWeight: FontWeight.w800,
-                            fontSize: 14,
-                          ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    spot.name,
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 14,
+                        ),
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  Text(
-                    '₹${spot.ratePerHour.toInt()}/hr',
-                    style: TextStyle(
-                      color: isDark ? AppTheme.cyan : AppTheme.cyanLight,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 16,
-                    ),
+                ),
+                Text(
+                  '₹${spot.ratePerHour.toInt()}/hr',
+                  style: TextStyle(
+                    color: isDark ? AppTheme.butter : AppTheme.forestGreen,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 16,
                   ),
-                ],
-              ),
-              const SizedBox(height: 3),
-              Text(
-                '${spot.distanceKm} km away • ${spot.area}',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 11),
-              ),
-              const Spacer(),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: AppTheme.success.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.verified_rounded,
-                          size: 11,
+                ),
+              ],
+            ),
+            const SizedBox(height: 3),
+            Text(
+              '${spot.distanceKm} km away • ${spot.area}',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 11),
+            ),
+            const Spacer(),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: AppTheme.success.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.verified_rounded,
+                        size: 11,
+                        color: AppTheme.success,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${spot.availableBays} bays free ✓',
+                        style: const TextStyle(
                           color: AppTheme.success,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
                         ),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${spot.availableBays} bays free ✓',
-                          style: const TextStyle(
-                            color: AppTheme.success,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                      minimumSize: const Size(80, 32),
-                      backgroundColor: AppTheme.cyan,
-                      foregroundColor: Colors.black,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                    ),
-                    onPressed: () => context.push('/parking-detail', extra: spot.id),
-                    child: const Text('Book Spot', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 11)),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  if (spot.isCovered) _buildChip('Covered Bay'),
-                  const SizedBox(width: 6),
-                  if (spot.hasCctv) _buildChip('CCTV 24/7'),
-                  const SizedBox(width: 6),
-                  _buildChip('Host Verified ✓'),
-                ],
-              ),
-            ],
-          ),
+                ),
+                NeumorphicButton(
+                  height: 32,
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  onPressed: () => context.push('/parking-detail', extra: spot.id),
+                  child: const Text('Book Spot', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 11)),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                if (spot.isCovered) _buildChip('Covered Bay'),
+                const SizedBox(width: 6),
+                if (spot.hasCctv) _buildChip('CCTV 24/7'),
+                const SizedBox(width: 6),
+                _buildChip('Host Verified ✓'),
+              ],
+            ),
+          ],
         ),
       ),
     );

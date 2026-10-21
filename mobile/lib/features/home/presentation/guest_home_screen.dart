@@ -4,6 +4,8 @@ import 'package:parksync/l10n/app_localizations.dart';
 import '../../../shared/theme/app_theme.dart';
 import '../../../core/locale_provider.dart';
 import '../../../core/theme_provider.dart';
+import '../../../shared/widgets/neumorphic_container.dart';
+import '../../../shared/widgets/sweet_popup.dart';
 
 /// Main Guest & Marketplace Screen
 /// - Fixed top AppBar (stays at top within screen metrics, never scrolls down)
@@ -36,7 +38,7 @@ class _GuestHomeScreenState extends State<GuestHomeScreen> {
       'cctv': true,
       'verified': true,
       'spots': 4,
-      'color': const Color(0xFF00D4FF),
+      'color': AppTheme.forestGreen,
     },
     {
       'id': 'p2',
@@ -84,7 +86,7 @@ class _GuestHomeScreenState extends State<GuestHomeScreen> {
       'cctv': true,
       'verified': true,
       'spots': 15,
-      'color': const Color(0xFF00D4FF),
+      'color': AppTheme.forestGreen,
     },
   ];
 
@@ -122,8 +124,22 @@ class _GuestHomeScreenState extends State<GuestHomeScreen> {
     setState(() {
       if (_savedSpotIds.contains(id)) {
         _savedSpotIds.remove(id);
+        SweetPopup.show(
+          context,
+          title: 'Removed from Favorites',
+          message: 'Parking bay removed from your saved list.',
+          icon: Icons.bookmark_remove_rounded,
+          iconColor: Colors.grey,
+        );
       } else {
         _savedSpotIds.add(id);
+        SweetPopup.show(
+          context,
+          title: 'Saved to Favorites!',
+          message: 'Parking bay saved for instant re-booking.',
+          icon: Icons.bookmark_added_rounded,
+          iconColor: AppTheme.amber,
+        );
       }
     });
   }
@@ -155,25 +171,20 @@ class _GuestHomeScreenState extends State<GuestHomeScreen> {
             child: Row(
               children: [
                 // ParkSync Logo badge
-                Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(10),
-                    gradient: AppTheme.cyanGradient,
-                  ),
-                  child: const Icon(
-                    Icons.local_parking_rounded,
-                    color: Color(0xFF080B12),
-                    size: 20,
-                  ),
+                NeumorphicIconBadge(
+                  icon: Icons.local_parking_rounded,
+                  size: 38,
+                  iconSize: 22,
+                  iconColor: Theme.of(context).colorScheme.primary,
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: 12),
                 Text(
                   'ParkSync',
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.w800,
+                        fontWeight: FontWeight.w900,
                         letterSpacing: -0.5,
+                        fontSize: 22,
+                        color: Theme.of(context).colorScheme.primary,
                       ),
                 ),
                 const Spacer(),
@@ -183,52 +194,42 @@ class _GuestHomeScreenState extends State<GuestHomeScreen> {
                   valueListenable: appThemeMode,
                   builder: (context, mode, _) {
                     final isNight = mode == ThemeMode.dark;
-                    return IconButton(
-                      tooltip: isNight ? 'Switch to Bright Mode' : 'Switch to Night Mode',
-                      icon: Icon(
-                        isNight ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
-                        size: 20,
-                        color: isNight ? const Color(0xFFFFB800) : const Color(0xFF0284C7),
-                      ),
-                      onPressed: toggleThemeMode,
+                    return NeumorphicIconBadge(
+                      icon: isNight ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
+                      size: 38,
+                      iconSize: 19,
+                      iconColor: isNight ? AppTheme.amber : AppTheme.forestGreen,
+                      onTap: () {
+                        toggleThemeMode();
+                        SweetPopup.show(
+                          context,
+                          title: isNight ? 'Bright Mode Enabled' : 'Night Mode Enabled',
+                          message: isNight ? 'Warm butter theme activated.' : 'Deep forest theme activated.',
+                          icon: isNight ? Icons.wb_sunny_rounded : Icons.nightlight_round,
+                        );
+                      },
                     );
                   },
                 ),
 
+                const SizedBox(width: 8),
+
                 // Language switcher pill
-                IconButton(
-                  tooltip: 'Change Language',
-                  icon: Icon(
-                    Icons.language_rounded,
-                    size: 20,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                  ),
-                  onPressed: () => _showLanguageModal(context),
+                NeumorphicIconBadge(
+                  icon: Icons.language_rounded,
+                  size: 38,
+                  iconSize: 19,
+                  onTap: () => _showLanguageModal(context),
                 ),
 
-                const SizedBox(width: 4),
+                const SizedBox(width: 8),
 
                 // Login Button
-                GestureDetector(
-                  onTap: () => context.push('/login'),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-                    decoration: BoxDecoration(
-                      color: AppTheme.cyan.withValues(alpha: isDark ? 0.12 : 0.2),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: AppTheme.cyan.withValues(alpha: isDark ? 0.3 : 0.6),
-                      ),
-                    ),
-                    child: Text(
-                      'Login',
-                      style: TextStyle(
-                        color: isDark ? AppTheme.cyan : AppTheme.cyanLight,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ),
+                NeumorphicButton(
+                  height: 38,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  onPressed: () => context.push('/login'),
+                  child: const Text('Login'),
                 ),
               ],
             ),
@@ -304,25 +305,12 @@ class _GuestHomeScreenState extends State<GuestHomeScreen> {
           const SizedBox(height: 18),
 
           // ── Real Interactive Search Bar (Typing works directly) ────────
-          Container(
+          NeumorphicCard(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-            decoration: BoxDecoration(
-              color: Theme.of(context).inputDecorationTheme.fillColor,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: Theme.of(context).dividerTheme.color ?? const Color(0xFF1C2A42),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: isDark ? 0.15 : 0.04),
-                  blurRadius: 10,
-                  offset: const Offset(0, 3),
-                ),
-              ],
-            ),
+            radius: 16,
             child: Row(
               children: [
-                const Icon(Icons.search_rounded, color: AppTheme.cyan, size: 22),
+                const Icon(Icons.search_rounded, color: AppTheme.forestGreen, size: 22),
                 const SizedBox(width: 10),
                 Expanded(
                   child: TextField(
@@ -358,21 +346,12 @@ class _GuestHomeScreenState extends State<GuestHomeScreen> {
                     },
                   ),
                 // Open Map Button
-                InkWell(
+                NeumorphicIconBadge(
+                  icon: Icons.map_rounded,
+                  size: 36,
+                  iconSize: 18,
+                  iconColor: AppTheme.forestGreen,
                   onTap: () => context.push('/search', extra: _searchCtrl.text),
-                  borderRadius: BorderRadius.circular(8),
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: AppTheme.cyan.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Icon(
-                      Icons.map_rounded,
-                      color: AppTheme.cyan,
-                      size: 18,
-                    ),
-                  ),
                 ),
               ],
             ),
@@ -509,23 +488,15 @@ class _GuestHomeScreenState extends State<GuestHomeScreen> {
   Widget _buildSpotCard(BuildContext context, Map<String, dynamic> spot, bool isSaved) {
     final Color accent = spot['color'] as Color;
 
-    return InkWell(
+    return NeumorphicCard(
       onTap: () => context.push('/parking-detail', extra: spot['id']),
-      borderRadius: BorderRadius.circular(18),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(
-            color: Theme.of(context).dividerTheme.color ?? const Color(0xFF1C2A42),
-          ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
+      padding: const EdgeInsets.all(16),
+      radius: 18,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
                 Container(
                   width: 44,
                   height: 44,
@@ -610,8 +581,7 @@ class _GuestHomeScreenState extends State<GuestHomeScreen> {
             ),
           ],
         ),
-      ),
-    );
+      );
   }
 
   Widget _buildMiniTag(String text, Color color) {
@@ -629,21 +599,15 @@ class _GuestHomeScreenState extends State<GuestHomeScreen> {
   }
 
   Widget _buildHowItWorksCard(BuildContext context) {
-    return Container(
+    return NeumorphicCard(
       padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: Theme.of(context).dividerTheme.color ?? const Color(0xFF1C2A42),
-        ),
-      ),
+      radius: 18,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Icon(Icons.info_outline_rounded, color: AppTheme.cyan, size: 20),
+              const Icon(Icons.info_outline_rounded, color: AppTheme.forestGreen, size: 20),
               const SizedBox(width: 8),
               Text(
                 'How ParkSync Works',
@@ -660,17 +624,17 @@ class _GuestHomeScreenState extends State<GuestHomeScreen> {
           Row(
             children: [
               Expanded(
-                child: OutlinedButton(
+                child: NeumorphicButton(
+                  height: 42,
                   onPressed: () => context.push('/role-selection'),
-                  style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(42)),
                   child: const Text('Read Guide', style: TextStyle(fontSize: 13)),
                 ),
               ),
               const SizedBox(width: 10),
               Expanded(
-                child: ElevatedButton(
+                child: NeumorphicButton(
+                  height: 42,
                   onPressed: () => context.push('/provider-onboarding'),
-                  style: ElevatedButton.styleFrom(minimumSize: const Size.fromHeight(42)),
                   child: const Text('List Space', style: TextStyle(fontSize: 13)),
                 ),
               ),
@@ -768,7 +732,7 @@ class _GuestHomeScreenState extends State<GuestHomeScreen> {
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
               gradient: const LinearGradient(
-                colors: [Color(0xFF00D4FF), Color(0xFF0284C7)],
+                colors: [AppTheme.forestGreen, AppTheme.forestGreenLight],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -913,15 +877,9 @@ class _GuestHomeScreenState extends State<GuestHomeScreen> {
     required String rate,
     required String ref,
   }) {
-    return Container(
+    return NeumorphicCard(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: Theme.of(context).dividerTheme.color ?? const Color(0xFF1C2A42),
-        ),
-      ),
+      radius: 16,
       child: Row(
         children: [
           Container(
@@ -984,21 +942,15 @@ class _GuestHomeScreenState extends State<GuestHomeScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // User Card
-          Container(
+          NeumorphicCard(
             padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: Theme.of(context).dividerTheme.color ?? const Color(0xFF1C2A42),
-              ),
-            ),
+            radius: 20,
             child: Row(
               children: [
                 CircleAvatar(
                   radius: 30,
-                  backgroundColor: AppTheme.cyan.withValues(alpha: 0.15),
-                  child: const Icon(Icons.person_rounded, size: 36, color: AppTheme.cyan),
+                  backgroundColor: AppTheme.forestGreen.withValues(alpha: 0.15),
+                  child: const Icon(Icons.person_rounded, size: 36, color: AppTheme.forestGreen),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
@@ -1020,12 +972,10 @@ class _GuestHomeScreenState extends State<GuestHomeScreen> {
                     ],
                   ),
                 ),
-                ElevatedButton(
+                NeumorphicButton(
+                  height: 38,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
                   onPressed: () => context.push('/login'),
-                  style: ElevatedButton.styleFrom(
-                    minimumSize: const Size(70, 36),
-                    padding: const EdgeInsets.symmetric(horizontal: 14),
-                  ),
                   child: const Text('Login', style: TextStyle(fontSize: 12)),
                 ),
               ],

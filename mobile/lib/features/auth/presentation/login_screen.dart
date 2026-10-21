@@ -5,6 +5,8 @@ import '../../../../shared/theme/app_theme.dart';
 import '../../../../shared/widgets/car_loading_indicator.dart';
 import '../../../../shared/widgets/animated_floating_background.dart';
 import '../../../../shared/widgets/country_picker_modal.dart';
+import '../../../../shared/widgets/neumorphic_container.dart';
+import '../../../../shared/widgets/sweet_popup.dart';
 import 'package:parksync/l10n/app_localizations.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -43,11 +45,12 @@ class _LoginScreenState extends State<LoginScreen> {
   void _sendOtp() async {
     final rawNumber = _phoneController.text.trim();
     if (rawNumber.length < 6) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please enter a valid phone number'),
-          backgroundColor: AppTheme.error,
-        ),
+      SweetPopup.show(
+        context,
+        title: 'Invalid Phone',
+        message: 'Please enter a valid phone number',
+        icon: Icons.phone_disabled_rounded,
+        iconColor: AppTheme.error,
       );
       return;
     }
@@ -71,12 +74,21 @@ class _LoginScreenState extends State<LoginScreen> {
     final l = AppLocalizations.of(context);
     final isEn = l != null;
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: AppTheme.bgBase,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
-          onPressed: () => context.pop(),
+        leading: Padding(
+          padding: const EdgeInsets.only(left: 12.0),
+          child: Center(
+            child: NeumorphicIconBadge(
+              icon: Icons.arrow_back_ios_new_rounded,
+              size: 38,
+              iconSize: 18,
+              onTap: () => context.pop(),
+            ),
+          ),
         ),
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -94,9 +106,9 @@ class _LoginScreenState extends State<LoginScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: AppTheme.cyan.withValues(alpha: 0.1),
+                    color: AppTheme.forestGreen.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: AppTheme.cyan.withValues(alpha: 0.3)),
+                    border: Border.all(color: AppTheme.forestGreen.withValues(alpha: 0.3)),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -105,7 +117,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         width: 8,
                         height: 8,
                         decoration: const BoxDecoration(
-                          color: AppTheme.cyan,
+                          color: AppTheme.forestGreen,
                           shape: BoxShape.circle,
                         ),
                       ),
@@ -113,7 +125,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       Text(
                         'Secure Authentication',
                         style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                              color: AppTheme.cyan,
+                              color: isDark ? AppTheme.butter : AppTheme.forestGreen,
                               fontWeight: FontWeight.w600,
                             ),
                       ),
@@ -136,21 +148,16 @@ class _LoginScreenState extends State<LoginScreen> {
                       ? l.enterPhoneDesc
                       : 'Enter your phone number to receive a verification code.',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppTheme.textSecondary,
                         height: 1.5,
                       ),
                 ),
 
-                const SizedBox(height: 40),
+                const SizedBox(height: 36),
 
                 // International Phone Input Box
-                Container(
-                  decoration: BoxDecoration(
-                    color: AppTheme.bgInput,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFF1C2A42)),
-                  ),
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                NeumorphicCard(
+                  radius: 18,
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                   child: Row(
                     children: [
                       // Country Code Selector Button
@@ -159,11 +166,14 @@ class _LoginScreenState extends State<LoginScreen> {
                         borderRadius: BorderRadius.circular(12),
                         child: Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 12),
+                              horizontal: 10, vertical: 10),
                           decoration: BoxDecoration(
-                            color: AppTheme.bgElevated,
+                            color: Theme.of(context).colorScheme.surface,
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: const Color(0xFF1C2A42)),
+                            border: Border.all(
+                              color: Theme.of(context).dividerTheme.color ??
+                                  const Color(0xFF1C2A42),
+                            ),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
@@ -180,14 +190,13 @@ class _LoginScreenState extends State<LoginScreen> {
                                     .bodyLarge
                                     ?.copyWith(
                                       fontWeight: FontWeight.w700,
-                                      color: AppTheme.textPrimary,
                                     ),
                               ),
                               const SizedBox(width: 4),
-                              const Icon(
+                              Icon(
                                 Icons.keyboard_arrow_down_rounded,
                                 size: 18,
-                                color: AppTheme.textSecondary,
+                                color: Theme.of(context).colorScheme.outline,
                               ),
                             ],
                           ),
@@ -205,16 +214,16 @@ class _LoginScreenState extends State<LoginScreen> {
                             FilteringTextInputFormatter.digitsOnly,
                             LengthLimitingTextInputFormatter(14),
                           ],
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w600,
                             letterSpacing: 1.2,
-                            color: AppTheme.textPrimary,
+                            color: Theme.of(context).colorScheme.onSurface,
                           ),
                           decoration: InputDecoration(
                             hintText: isEn ? l.mobileNumber : 'Mobile Number',
-                            hintStyle: const TextStyle(
-                              color: AppTheme.textMuted,
+                            hintStyle: TextStyle(
+                              color: Theme.of(context).colorScheme.outline,
                               letterSpacing: 0,
                             ),
                             border: InputBorder.none,
@@ -234,8 +243,8 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 16),
                 Row(
                   children: [
-                    const Icon(Icons.shield_outlined,
-                        size: 14, color: AppTheme.textMuted),
+                    Icon(Icons.shield_outlined,
+                        size: 14, color: Theme.of(context).colorScheme.outline),
                     const SizedBox(width: 6),
                     Text(
                       'Standard carrier SMS rates apply • Instant OTP',
@@ -247,11 +256,13 @@ class _LoginScreenState extends State<LoginScreen> {
                 const Spacer(),
 
                 // Submit Button
-                ElevatedButton(
+                NeumorphicButton(
+                  height: 52,
                   onPressed: _isLoading ? null : _sendOtp,
                   child: _isLoading
                       ? const CarLoadingIndicator(size: 28)
-                      : Text(isEn ? l.continueText : 'Continue'),
+                      : Text(isEn ? l.continueText : 'Continue',
+                          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
                 ),
                 const SizedBox(height: 24),
               ],

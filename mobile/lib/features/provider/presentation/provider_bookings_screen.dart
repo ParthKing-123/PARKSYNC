@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../shared/theme/app_theme.dart';
+import '../../../shared/widgets/neumorphic_container.dart';
+import '../../../shared/widgets/sweet_popup.dart';
 
 class BookingItemData {
   final String id;
@@ -141,24 +143,12 @@ class _ProviderBookingsScreenState extends State<ProviderBookingsScreen> {
     setState(() {
       booking.status = 'ACTIVE';
     });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        backgroundColor: AppTheme.success,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        content: Row(
-          children: [
-            const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                'Booking ${booking.id} approved! ${booking.driverName} has been notified with the digital parking pass.',
-                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
-              ),
-            ),
-          ],
-        ),
-      ),
+    SweetPopup.show(
+      context,
+      title: 'Booking Approved!',
+      message: '${booking.driverName} has been sent their verified digital parking pass.',
+      icon: Icons.check_circle_rounded,
+      iconColor: AppTheme.success,
     );
   }
 
@@ -166,24 +156,12 @@ class _ProviderBookingsScreenState extends State<ProviderBookingsScreen> {
     setState(() {
       booking.status = 'DECLINED';
     });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        backgroundColor: AppTheme.error,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        content: Row(
-          children: [
-            const Icon(Icons.cancel_rounded, color: Colors.white, size: 20),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                'Booking request ${booking.id} declined.',
-                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
-              ),
-            ),
-          ],
-        ),
-      ),
+    SweetPopup.show(
+      context,
+      title: 'Booking Declined',
+      message: 'Request ${booking.id} has been declined.',
+      icon: Icons.cancel_rounded,
+      iconColor: AppTheme.error,
     );
   }
 
@@ -191,24 +169,12 @@ class _ProviderBookingsScreenState extends State<ProviderBookingsScreen> {
     setState(() {
       booking.status = 'COMPLETED';
     });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        backgroundColor: AppTheme.cyan,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        content: Row(
-          children: [
-            const Icon(Icons.task_alt_rounded, color: Colors.black, size: 20),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                'Booking ${booking.id} marked as completed. Payout added to your earnings.',
-                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: Colors.black),
-              ),
-            ),
-          ],
-        ),
-      ),
+    SweetPopup.show(
+      context,
+      title: 'Session Completed!',
+      message: 'Payout of ${booking.amount} credited to your host wallet.',
+      icon: Icons.task_alt_rounded,
+      iconColor: AppTheme.forestGreen,
     );
   }
 
@@ -554,27 +520,10 @@ class _ProviderBookingsScreenState extends State<ProviderBookingsScreen> {
         break;
     }
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: booking.status == 'PENDING'
-              ? AppTheme.amber.withValues(alpha: 0.4)
-              : (Theme.of(context).dividerTheme.color ?? const Color(0xFF1C2A42)),
-          width: booking.status == 'PENDING' ? 1.5 : 1.0,
-        ),
-        boxShadow: [
-          if (booking.status == 'PENDING')
-            BoxShadow(
-              color: AppTheme.amber.withValues(alpha: 0.08),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-        ],
-      ),
-      child: Padding(
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: NeumorphicCard(
+        radius: 18,
         padding: const EdgeInsets.all(18.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -882,16 +831,17 @@ class _ProviderBookingsScreenState extends State<ProviderBookingsScreen> {
                   const SizedBox(width: 10),
                   Expanded(
                     flex: 3,
-                    child: ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.cyan,
-                        foregroundColor: Colors.black,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
+                    child: NeumorphicButton(
+                      height: 44,
                       onPressed: () => _approveBooking(booking),
-                      icon: const Icon(Icons.check_circle_rounded, size: 16, color: Colors.black),
-                      label: const Text('Approve Booking', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13)),
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.check_circle_rounded, size: 16),
+                          SizedBox(width: 6),
+                          Text('Approve Booking', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13)),
+                        ],
+                      ),
                     ),
                   ),
                 ],
@@ -912,16 +862,17 @@ class _ProviderBookingsScreenState extends State<ProviderBookingsScreen> {
                   ),
                   const SizedBox(width: 10),
                   Expanded(
-                    child: ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.success,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
+                    child: NeumorphicButton(
+                      height: 44,
                       onPressed: () => _completeBooking(booking),
-                      icon: const Icon(Icons.done_all_rounded, size: 16),
-                      label: const Text('Complete Booking', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13)),
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.done_all_rounded, size: 16),
+                          SizedBox(width: 6),
+                          Text('Complete Booking', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13)),
+                        ],
+                      ),
                     ),
                   ),
                 ],

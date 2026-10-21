@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../shared/theme/app_theme.dart';
 import '../../../../shared/widgets/animated_floating_background.dart';
+import '../../../../shared/widgets/neumorphic_container.dart';
 import 'package:parksync/l10n/app_localizations.dart';
 
 /// Informational guide explaining the two personas (Buyer/Driver vs Seller/Provider)
@@ -13,13 +14,21 @@ class RoleSelectionScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final isEn = l != null;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: AppTheme.bgBase,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
-          onPressed: () => context.go('/guest-home'),
+        leading: Padding(
+          padding: const EdgeInsets.only(left: 12.0),
+          child: Center(
+            child: NeumorphicIconBadge(
+              icon: Icons.arrow_back_ios_new_rounded,
+              size: 38,
+              iconSize: 18,
+              onTap: () => context.go('/guest-home'),
+            ),
+          ),
         ),
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -35,14 +44,14 @@ class RoleSelectionScreen extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: AppTheme.cyan.withValues(alpha: 0.1),
+                    color: AppTheme.forestGreen.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: AppTheme.cyan.withValues(alpha: 0.3)),
+                    border: Border.all(color: AppTheme.forestGreen.withValues(alpha: 0.3)),
                   ),
                   child: Text(
                     isEn ? l.howItWorks : 'How ParkSync Works',
                     style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                          color: AppTheme.cyan,
+                          color: isDark ? AppTheme.butter : AppTheme.forestGreen,
                           fontWeight: FontWeight.w600,
                         ),
                   ),
@@ -59,7 +68,6 @@ class RoleSelectionScreen extends StatelessWidget {
                 Text(
                   'Whether you need a guaranteed parking spot or have extra bays to monetize, ParkSync connects drivers and hosts seamlessly.',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppTheme.textSecondary,
                         height: 1.5,
                       ),
                 ),
@@ -73,7 +81,7 @@ class RoleSelectionScreen extends StatelessWidget {
                       ? l.forDriversDesc
                       : 'Search, navigate, and book verified parking bays across India with guaranteed space and live status.',
                   icon: Icons.directions_car_rounded,
-                  accentColor: AppTheme.cyan,
+                  accentColor: AppTheme.forestGreen,
                   buttonText: isEn ? l.exploreParking : 'Explore Parking',
                   onTap: () => context.go('/guest-home'),
                 ),
@@ -88,7 +96,7 @@ class RoleSelectionScreen extends StatelessWidget {
                       ? l.forProvidersDesc
                       : 'Turn empty driveways, restaurant slots, or corporate basements into passive income.',
                   icon: Icons.storefront_rounded,
-                  accentColor: AppTheme.violet,
+                  accentColor: AppTheme.forestGreenLight,
                   buttonText: isEn ? l.listYourSpace : 'List Your Space',
                   onTap: () => context.push('/provider-onboarding'),
                 ),
@@ -98,7 +106,7 @@ class RoleSelectionScreen extends StatelessWidget {
                 Center(
                   child: TextButton(
                     onPressed: () => context.go('/guest-home'),
-                    child: const Text('Continue to Marketplace →'),
+                    child: const Text('Continue to Marketplace →', style: TextStyle(fontWeight: FontWeight.w700)),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -132,20 +140,9 @@ class _PersonaCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return NeumorphicCard(
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: AppTheme.bgSurface,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFF1C2A42)),
-        boxShadow: [
-          BoxShadow(
-            color: accentColor.withValues(alpha: 0.05),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
+      radius: 20,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -188,37 +185,28 @@ class _PersonaCard extends StatelessWidget {
           Text(
             description,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AppTheme.textSecondary,
                   fontSize: 13,
                   height: 1.5,
                 ),
           ),
           const SizedBox(height: 16),
-          InkWell(
-            onTap: onTap,
-            borderRadius: BorderRadius.circular(10),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              decoration: BoxDecoration(
-                color: accentColor.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: accentColor.withValues(alpha: 0.3)),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    buttonText,
-                    style: TextStyle(
-                      color: accentColor,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 13,
-                    ),
+          NeumorphicButton(
+            height: 38,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            onPressed: onTap,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  buttonText,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
                   ),
-                  const SizedBox(width: 6),
-                  Icon(Icons.arrow_forward_rounded, color: accentColor, size: 14),
-                ],
-              ),
+                ),
+                const SizedBox(width: 6),
+                const Icon(Icons.arrow_forward_rounded, size: 14),
+              ],
             ),
           ),
         ],

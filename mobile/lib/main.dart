@@ -8,6 +8,7 @@ import 'core/router.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await initThemeMode();
   runApp(const ParkSyncApp());
 }
 
