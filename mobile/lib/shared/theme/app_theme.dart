@@ -18,21 +18,22 @@ class AppTheme {
   static const Color forestGreenDark  = Color(0xFF002722); // Deepest forest
   static const Color forestGreenLight = Color(0xFF0A584F); // Rich forest emerald
   static const Color forestEmerald    = Color(0xFF157B6E); // Vibrant mid-green
-  static const Color forestSurface    = Color(0xFF0D2520); // Dark mode card surface
-  static const Color forestElevated   = Color(0xFF15332C); // Dark mode raised card
-  static const Color forestBase       = Color(0xFF071714); // Dark mode deep base
-  static const Color forestShadow     = Color(0xFF020907); // Dark mode deep shadow
-  static const Color forestHighlight  = Color(0xFF1B4239); // Dark mode top highlight
+  static const Color forestSurface    = Color(0xFF0D2D26); // Dark mode card surface (distinct elevation)
+  static const Color forestElevated   = Color(0xFF143B33); // Dark mode raised card
+  static const Color forestBase       = Color(0xFF051714); // Dark mode deep base
+  static const Color forestShadow     = Color(0xFF000504); // Dark mode deep obsidian shadow
+  static const Color forestHighlight  = Color(0xFF226759); // Dark mode top highlight
 
   // Supporting status accents
-  static const Color success = Color(0xFF10B981); // Emerald check
-  static const Color amber   = Color(0xFFFFB800); // Warning/pending amber
-  static const Color error   = Color(0xFFDC2626); // Alert red
+  static const Color success    = Color(0xFF10B981); // Emerald check
+  static const Color amber      = Color(0xFFFFB800); // Warning/pending amber
+  static const Color error      = Color(0xFFDC2626); // Alert red
+  static const Color accentGold = Color(0xFFFFD54F); // Radiant Butter Gold for rates & badges
 
-  // ── Backward-compatible Aliases (mapped to Butter & Forest Green) ─────
-  static const Color cyan      = forestGreen;      // Replaced with Forest Green
-  static const Color cyanLight = forestGreen;      // Replaced with Forest Green
-  static const Color violet    = forestGreenLight; // Replaced with Forest Emerald
+  // ── Backward-compatible Aliases (mapped to vibrant contrast tokens) ───
+  static const Color cyan      = Color(0xFF2DD4BF); // Vibrant mint accent (visible on both dark & light)
+  static const Color cyanLight = forestGreen;      // Replaced with Forest Green in light mode
+  static const Color violet    = Color(0xFFFFD54F); // Radiant Butter Gold accent
 
   // ── Palette: Light Mode (Butter Base) ─────────────────────────────────
   static const Color bgBaseLight        = butter;
@@ -49,12 +50,16 @@ class AppTheme {
   static const Color bgBaseDark         = forestBase;
   static const Color bgSurfaceDark      = forestSurface;
   static const Color bgElevatedDark     = forestElevated;
-  static const Color bgInputDark        = Color(0xFF102A24);
-  static const Color borderDark         = Color(0xFF1B3D35);
+  static const Color bgInputDark        = Color(0xFF0C241E);
+  static const Color borderDark         = Color(0xFF1B4D41);
 
   static const Color textPrimaryDark    = butter;
-  static const Color textSecondaryDark  = Color(0xFFB8D3CC);
-  static const Color textMutedDark      = Color(0xFF6C8C85);
+  static const Color textSecondaryDark  = Color(0xFFD6EAE5); // Much brighter, crisp contrast
+  static const Color textMutedDark      = Color(0xFFA5C9C1); // Highly readable muted tone
+
+  // Semantic Helpers
+  static Color rateColor(bool isDark) => isDark ? accentGold : forestGreen;
+  static Color brandAccent(bool isDark) => isDark ? butter : forestGreen;
 
   // Common aliases (defaults)
   static const Color bgBase        = bgBaseLight;
@@ -82,34 +87,54 @@ class AppTheme {
   // ── Neumorphic Shadow Generators ──────────────────────────────────────
   static List<BoxShadow> neumorphicShadows({
     required bool isDark,
-    double distance = 4.0,
-    double blur = 10.0,
+    double distance = 5.0,
+    double blur = 14.0,
     double intensity = 1.0,
   }) {
     if (isDark) {
       return [
+        // 1. Top-Left luminous emerald highlight reflection
         BoxShadow(
-          color: forestHighlight.withValues(alpha: 0.45 * intensity),
+          color: const Color(0xFF1E5E50).withValues(alpha: 0.65 * intensity),
           offset: Offset(-distance, -distance),
-          blurRadius: blur,
+          blurRadius: blur * 0.75,
+          spreadRadius: 0,
         ),
+        // 2. Bottom-Right deep obsidian cast shadow
         BoxShadow(
-          color: forestShadow.withValues(alpha: 0.75 * intensity),
+          color: const Color(0xFF000504).withValues(alpha: 0.95 * intensity),
           offset: Offset(distance, distance),
           blurRadius: blur,
+          spreadRadius: 1,
+        ),
+        // 3. Ambient contact shadow
+        BoxShadow(
+          color: const Color(0xFF020D0B).withValues(alpha: 0.5 * intensity),
+          offset: const Offset(0, 2),
+          blurRadius: 4,
         ),
       ];
     } else {
       return [
+        // 1. Top-Left luminous white reflection
         BoxShadow(
-          color: butterHighlight.withValues(alpha: 0.95 * intensity),
+          color: const Color(0xFFFFFFFF).withValues(alpha: 0.95 * intensity),
           offset: Offset(-distance, -distance),
-          blurRadius: blur,
+          blurRadius: blur * 0.7,
+          spreadRadius: 0,
         ),
+        // 2. Bottom-Right warm golden butter shadow
         BoxShadow(
-          color: butterShadow.withValues(alpha: 0.60 * intensity),
+          color: const Color(0xFFCEB070).withValues(alpha: 0.65 * intensity),
           offset: Offset(distance, distance),
           blurRadius: blur,
+          spreadRadius: 1,
+        ),
+        // 3. Ambient warm depth
+        BoxShadow(
+          color: const Color(0xFFE2C889).withValues(alpha: 0.4 * intensity),
+          offset: const Offset(1, 2),
+          blurRadius: 4,
         ),
       ];
     }
@@ -117,23 +142,35 @@ class AppTheme {
 
   static List<BoxShadow> neumorphicPressedShadows({
     required bool isDark,
-    double distance = 2.0,
-    double blur = 5.0,
+    double distance = 3.0,
+    double blur = 6.0,
   }) {
     if (isDark) {
       return [
         BoxShadow(
-          color: forestShadow.withValues(alpha: 0.7),
+          color: const Color(0xFF000504).withValues(alpha: 0.9),
           offset: Offset(distance, distance),
           blurRadius: blur,
+          spreadRadius: 1,
+        ),
+        BoxShadow(
+          color: const Color(0xFF184E43).withValues(alpha: 0.4),
+          offset: Offset(-distance * 0.5, -distance * 0.5),
+          blurRadius: blur * 0.5,
         ),
       ];
     } else {
       return [
         BoxShadow(
-          color: butterShadow.withValues(alpha: 0.55),
+          color: const Color(0xFFC7A965).withValues(alpha: 0.75),
           offset: Offset(distance, distance),
           blurRadius: blur,
+          spreadRadius: 1,
+        ),
+        BoxShadow(
+          color: const Color(0xFFFFFFFF).withValues(alpha: 0.6),
+          offset: Offset(-distance * 0.5, -distance * 0.5),
+          blurRadius: blur * 0.5,
         ),
       ];
     }
@@ -145,17 +182,50 @@ class AppTheme {
     double radius = 18.0,
     Color? color,
     Border? border,
+    bool useGradient = true,
   }) {
     final surfaceColor = color ?? (isDark ? bgSurfaceDark : bgSurfaceLight);
+
+    // Physical convex surface lighting gradient
+    Gradient? surfaceGradient;
+    if (useGradient && color == null) {
+      if (isDark) {
+        surfaceGradient = isPressed
+            ? const LinearGradient(
+                colors: [Color(0xFF071E1A), Color(0xFF10362E)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              )
+            : const LinearGradient(
+                colors: [Color(0xFF143E35), Color(0xFF0A2621)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              );
+      } else {
+        surfaceGradient = isPressed
+            ? const LinearGradient(
+                colors: [Color(0xFFF0DC9D), Color(0xFFFFFBE8)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              )
+            : const LinearGradient(
+                colors: [Color(0xFFFFFDF5), Color(0xFFF7E5B0)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              );
+      }
+    }
+
     return BoxDecoration(
-      color: surfaceColor,
+      color: surfaceGradient == null ? surfaceColor : null,
+      gradient: surfaceGradient,
       borderRadius: BorderRadius.circular(radius),
       border: border ??
           Border.all(
             color: isDark
-                ? forestHighlight.withValues(alpha: 0.3)
-                : butterHighlight.withValues(alpha: 0.6),
-            width: 0.8,
+                ? const Color(0xFF23695B).withValues(alpha: isPressed ? 0.3 : 0.65)
+                : const Color(0xFFFFFFFF).withValues(alpha: isPressed ? 0.4 : 0.85),
+            width: 1.0,
           ),
       boxShadow: isPressed
           ? neumorphicPressedShadows(isDark: isDark)

@@ -186,6 +186,7 @@ class _ProviderBookingsScreenState extends State<ProviderBookingsScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (context) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
         return Padding(
           padding: const EdgeInsets.all(24.0),
           child: Column(
@@ -207,10 +208,14 @@ class _ProviderBookingsScreenState extends State<ProviderBookingsScreen> {
                 children: [
                   CircleAvatar(
                     radius: 22,
-                    backgroundColor: AppTheme.cyan.withValues(alpha: 0.15),
+                    backgroundColor: isDark ? const Color(0xFF143B33) : AppTheme.forestGreen.withValues(alpha: 0.15),
                     child: Text(
                       booking.driverName.substring(0, 1),
-                      style: const TextStyle(color: AppTheme.cyan, fontWeight: FontWeight.bold, fontSize: 18),
+                      style: TextStyle(
+                        color: isDark ? AppTheme.butter : AppTheme.forestGreen,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -220,7 +225,11 @@ class _ProviderBookingsScreenState extends State<ProviderBookingsScreen> {
                       children: [
                         Text(
                           booking.driverName,
-                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            color: isDark ? AppTheme.butter : AppTheme.forestGreen,
+                          ),
                         ),
                         const SizedBox(height: 2),
                         const Row(
@@ -249,7 +258,7 @@ class _ProviderBookingsScreenState extends State<ProviderBookingsScreen> {
                   children: [
                     Row(
                       children: [
-                        const Icon(Icons.email_outlined, size: 18, color: AppTheme.cyan),
+                        Icon(Icons.email_outlined, size: 18, color: isDark ? AppTheme.butter : AppTheme.forestGreen),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Text(
@@ -270,7 +279,7 @@ class _ProviderBookingsScreenState extends State<ProviderBookingsScreen> {
                     const Divider(height: 20),
                     Row(
                       children: [
-                        const Icon(Icons.phone_outlined, size: 18, color: AppTheme.cyan),
+                        Icon(Icons.phone_outlined, size: 18, color: isDark ? AppTheme.butter : AppTheme.forestGreen),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Text(
@@ -439,6 +448,12 @@ class _ProviderBookingsScreenState extends State<ProviderBookingsScreen> {
 
   Widget _buildFilterChip(String filterKey, String label, {bool hasAlert = false}) {
     final isSelected = _selectedFilter == filterKey;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final selectedBg = isDark ? AppTheme.butter : AppTheme.forestGreen;
+    final selectedFg = isDark ? AppTheme.forestGreenDark : AppTheme.butter;
+    final unselectedBg = isDark ? AppTheme.forestSurface : AppTheme.butterCream;
+    final unselectedFg = isDark ? AppTheme.butter : AppTheme.forestGreen;
+
     return InkWell(
       onTap: () {
         setState(() {
@@ -450,14 +465,12 @@ class _ProviderBookingsScreenState extends State<ProviderBookingsScreen> {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected
-              ? AppTheme.cyan.withValues(alpha: 0.18)
-              : Theme.of(context).colorScheme.surface,
+          color: isSelected ? selectedBg : unselectedBg,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: isSelected
-                ? AppTheme.cyan
-                : (Theme.of(context).dividerTheme.color ?? const Color(0xFF1C2A42)),
+                ? selectedBg
+                : (Theme.of(context).dividerTheme.color ?? (isDark ? AppTheme.borderDark : AppTheme.borderLight)),
             width: isSelected ? 1.5 : 1.0,
           ),
         ),
@@ -478,9 +491,7 @@ class _ProviderBookingsScreenState extends State<ProviderBookingsScreen> {
             Text(
               label,
               style: TextStyle(
-                color: isSelected
-                    ? AppTheme.cyan
-                    : Theme.of(context).colorScheme.onSurface,
+                color: isSelected ? selectedFg : unselectedFg,
                 fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
                 fontSize: 12,
               ),
@@ -503,7 +514,7 @@ class _ProviderBookingsScreenState extends State<ProviderBookingsScreen> {
         statusIcon = Icons.hourglass_top_rounded;
         break;
       case 'ACTIVE':
-        statusColor = AppTheme.cyan;
+        statusColor = isDark ? AppTheme.accentGold : AppTheme.forestGreen;
         statusLabel = 'ACTIVE SPOT OCCUPIED';
         statusIcon = Icons.sensors_rounded;
         break;
@@ -538,7 +549,11 @@ class _ProviderBookingsScreenState extends State<ProviderBookingsScreen> {
                     children: [
                       Text(
                         booking.spotName,
-                        style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
+                        style: TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 15,
+                          color: isDark ? AppTheme.butter : AppTheme.forestGreen,
+                        ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -546,7 +561,7 @@ class _ProviderBookingsScreenState extends State<ProviderBookingsScreen> {
                       Text(
                         booking.id,
                         style: TextStyle(
-                          color: Theme.of(context).colorScheme.outline,
+                          color: isDark ? const Color(0xFFD6EAE5) : Theme.of(context).colorScheme.outline,
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
                           letterSpacing: 0.5,
@@ -592,7 +607,7 @@ class _ProviderBookingsScreenState extends State<ProviderBookingsScreen> {
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.access_time_filled_rounded, size: 16, color: AppTheme.cyan),
+                  Icon(Icons.access_time_filled_rounded, size: 16, color: isDark ? AppTheme.accentGold : AppTheme.forestGreen),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Column(
@@ -606,7 +621,7 @@ class _ProviderBookingsScreenState extends State<ProviderBookingsScreen> {
                           'Requested Duration: ${booking.duration}',
                           style: TextStyle(
                             fontSize: 11,
-                            color: Theme.of(context).colorScheme.outline,
+                            color: isDark ? const Color(0xFFD6EAE5) : Theme.of(context).colorScheme.outline,
                           ),
                         ),
                       ],
@@ -614,10 +629,10 @@ class _ProviderBookingsScreenState extends State<ProviderBookingsScreen> {
                   ),
                   Text(
                     'Payout: ${booking.amount}',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w800,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w900,
                       fontSize: 13,
-                      color: AppTheme.cyan,
+                      color: isDark ? AppTheme.accentGold : AppTheme.forestGreen,
                     ),
                   ),
                 ],
@@ -633,7 +648,9 @@ class _ProviderBookingsScreenState extends State<ProviderBookingsScreen> {
                 color: Theme.of(context).colorScheme.surfaceContainerHighest,
                 borderRadius: BorderRadius.circular(14),
                 border: Border.all(
-                  color: AppTheme.cyan.withValues(alpha: 0.25),
+                  color: isDark
+                      ? AppTheme.butter.withValues(alpha: 0.18)
+                      : AppTheme.forestGreen.withValues(alpha: 0.18),
                 ),
               ),
               child: Column(
@@ -643,13 +660,13 @@ class _ProviderBookingsScreenState extends State<ProviderBookingsScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
+                      Text(
                         'DRIVER IDENTITY & VEHICLE DETAILS',
                         style: TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.w800,
                           letterSpacing: 0.6,
-                          color: AppTheme.cyan,
+                          color: isDark ? AppTheme.butter : AppTheme.forestGreen,
                         ),
                       ),
                       if (booking.isDriverPlatformVerified)
@@ -684,11 +701,13 @@ class _ProviderBookingsScreenState extends State<ProviderBookingsScreen> {
                     children: [
                       CircleAvatar(
                         radius: 20,
-                        backgroundColor: AppTheme.cyan.withValues(alpha: 0.15),
+                        backgroundColor: isDark
+                            ? const Color(0xFF143B33)
+                            : AppTheme.forestGreen.withValues(alpha: 0.12),
                         child: Text(
                           booking.driverName.substring(0, 1),
-                          style: const TextStyle(
-                            color: AppTheme.cyan,
+                          style: TextStyle(
+                            color: isDark ? AppTheme.butter : AppTheme.forestGreen,
                             fontWeight: FontWeight.w800,
                             fontSize: 16,
                           ),
@@ -730,7 +749,11 @@ class _ProviderBookingsScreenState extends State<ProviderBookingsScreen> {
                   // Driver Gmail
                   Row(
                     children: [
-                      const Icon(Icons.email_outlined, size: 14, color: AppTheme.cyan),
+                      Icon(
+                        Icons.email_outlined,
+                        size: 14,
+                        color: isDark ? AppTheme.butter : AppTheme.forestGreen,
+                      ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
@@ -754,7 +777,11 @@ class _ProviderBookingsScreenState extends State<ProviderBookingsScreen> {
                   // Driver Phone
                   Row(
                     children: [
-                      const Icon(Icons.phone_outlined, size: 14, color: AppTheme.cyan),
+                      Icon(
+                        Icons.phone_outlined,
+                        size: 14,
+                        color: isDark ? AppTheme.butter : AppTheme.forestGreen,
+                      ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
@@ -778,7 +805,11 @@ class _ProviderBookingsScreenState extends State<ProviderBookingsScreen> {
                   // Vehicle info
                   Row(
                     children: [
-                      const Icon(Icons.directions_car_rounded, size: 14, color: AppTheme.cyan),
+                      Icon(
+                        Icons.directions_car_rounded,
+                        size: 14,
+                        color: isDark ? AppTheme.butter : AppTheme.forestGreen,
+                      ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
@@ -790,13 +821,13 @@ class _ProviderBookingsScreenState extends State<ProviderBookingsScreen> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
-                            color: AppTheme.cyan.withValues(alpha: 0.15),
+                            color: AppTheme.success.withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: const Text(
                             'RC Verified ✓',
                             style: TextStyle(
-                              color: AppTheme.cyan,
+                              color: AppTheme.success,
                               fontSize: 10,
                               fontWeight: FontWeight.w800,
                             ),

@@ -50,7 +50,7 @@ class _GuestHomeScreenState extends State<GuestHomeScreen> {
       'cctv': true,
       'verified': true,
       'spots': 12,
-      'color': const Color(0xFF7C3AED),
+      'color': AppTheme.forestEmerald,
     },
     {
       'id': 'p3',
@@ -163,7 +163,7 @@ class _GuestHomeScreenState extends State<GuestHomeScreen> {
               color: Theme.of(context).colorScheme.surface,
               border: Border(
                 bottom: BorderSide(
-                  color: Theme.of(context).dividerTheme.color ?? const Color(0xFF1C2A42),
+                  color: Theme.of(context).dividerTheme.color ?? (isDark ? AppTheme.borderDark : AppTheme.borderLight),
                   width: 1,
                 ),
               ),
@@ -454,6 +454,14 @@ class _GuestHomeScreenState extends State<GuestHomeScreen> {
     final isSelected = _selectedFilter == label;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
+    final selectedBg = isDark ? AppTheme.butter : AppTheme.forestGreen;
+    final selectedFg = isDark ? AppTheme.forestGreenDark : AppTheme.butter;
+    final unselectedBg = isDark ? AppTheme.forestSurface : AppTheme.butterCream;
+    final unselectedFg = isDark ? AppTheme.butter : AppTheme.forestGreen;
+    final borderColor = isSelected
+        ? (isDark ? AppTheme.butter : AppTheme.forestGreen)
+        : (isDark ? AppTheme.borderDark : AppTheme.borderLight);
+
     return Padding(
       padding: const EdgeInsets.only(right: 8.0),
       child: FilterChip(
@@ -464,29 +472,24 @@ class _GuestHomeScreenState extends State<GuestHomeScreen> {
             _selectedFilter = label;
           });
         },
-        selectedColor: AppTheme.cyan.withValues(alpha: isDark ? 0.2 : 0.25),
-        checkmarkColor: isDark ? AppTheme.cyan : AppTheme.cyanLight,
+        backgroundColor: unselectedBg,
+        selectedColor: selectedBg,
+        checkmarkColor: selectedFg,
         labelStyle: TextStyle(
-          color: isSelected
-              ? (isDark ? AppTheme.cyan : AppTheme.cyanLight)
-              : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
-          fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+          color: isSelected ? selectedFg : unselectedFg,
+          fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
           fontSize: 12,
         ),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
-          side: BorderSide(
-            color: isSelected
-                ? AppTheme.cyan
-                : (Theme.of(context).dividerTheme.color ?? const Color(0xFF1C2A42)),
-          ),
+          side: BorderSide(color: borderColor, width: 1.0),
         ),
       ),
     );
   }
 
   Widget _buildSpotCard(BuildContext context, Map<String, dynamic> spot, bool isSaved) {
-    final Color accent = spot['color'] as Color;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return NeumorphicCard(
       onTap: () => context.push('/parking-detail', extra: spot['id']),
@@ -497,103 +500,133 @@ class _GuestHomeScreenState extends State<GuestHomeScreen> {
         children: [
           Row(
             children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: accent.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(Icons.local_parking_rounded, color: accent, size: 22),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        spot['name'],
-                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                              fontWeight: FontWeight.w700,
-                            ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        '${spot['distance']} km away • ${spot['area']}',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                            ),
-                      ),
-                    ],
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF143B33) : AppTheme.forestGreen.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isDark ? const Color(0xFF23695B).withValues(alpha: 0.6) : AppTheme.borderLight,
+                    width: 1.0,
                   ),
                 ),
-                // Bookmark button
-                IconButton(
-                  icon: Icon(
-                    isSaved ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
-                    color: isSaved ? AppTheme.cyan : Theme.of(context).colorScheme.outline,
-                    size: 22,
-                  ),
-                  onPressed: () => _toggleSaveSpot(spot['id']),
+                child: Icon(
+                  Icons.local_parking_rounded,
+                  color: isDark ? AppTheme.butter : AppTheme.forestGreen,
+                  size: 22,
                 ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            const Divider(height: 1),
-            const SizedBox(height: 10),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (spot['covered'] == true) _buildMiniTag('Covered', AppTheme.cyan),
-                    if (spot['cctv'] == true) ...[
-                      const SizedBox(width: 6),
-                      _buildMiniTag('CCTV', AppTheme.violet),
-                    ],
-                    if (spot['verified'] == true) ...[
-                      const SizedBox(width: 6),
-                      _buildMiniTag('Verified ✓', AppTheme.success),
-                    ],
+                    Text(
+                      spot['name'],
+                      style: TextStyle(
+                        color: isDark ? AppTheme.butter : AppTheme.forestGreen,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 15,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${spot['distance']} km away • ${spot['area']}',
+                      style: TextStyle(
+                        color: isDark ? const Color(0xFFD6EAE5) : AppTheme.textSecondaryLight,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
                   ],
                 ),
-                RichText(
-                  text: TextSpan(
-                    text: '₹${spot['rate']}',
-                    style: TextStyle(
-                      color: accent,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800,
-                    ),
-                    children: [
-                      TextSpan(
-                        text: '/hr',
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
+              ),
+              // Bookmark button
+              IconButton(
+                icon: Icon(
+                  isSaved ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
+                  color: isSaved
+                      ? (isDark ? AppTheme.butter : AppTheme.forestGreen)
+                      : (isDark ? const Color(0xFFA5C9C1) : AppTheme.textMutedLight),
+                  size: 22,
                 ),
-              ],
-            ),
-          ],
-        ),
-      );
+                onPressed: () => _toggleSaveSpot(spot['id']),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Divider(
+            height: 1,
+            color: isDark ? AppTheme.borderDark : AppTheme.borderLight,
+          ),
+          const SizedBox(height: 10),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  if (spot['covered'] == true) _buildMiniTag('Covered', isDark),
+                  if (spot['cctv'] == true) ...[
+                    const SizedBox(width: 6),
+                    _buildMiniTag('CCTV', isDark),
+                  ],
+                  if (spot['verified'] == true) ...[
+                    const SizedBox(width: 6),
+                    _buildMiniTag('Verified ✓', isDark, isVerified: true),
+                  ],
+                ],
+              ),
+              RichText(
+                text: TextSpan(
+                  text: '₹${spot['rate']}',
+                  style: TextStyle(
+                    color: isDark ? AppTheme.accentGold : AppTheme.forestGreen,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w900,
+                  ),
+                  children: [
+                    TextSpan(
+                      text: '/hr',
+                      style: TextStyle(
+                        color: isDark ? const Color(0xFFD6EAE5) : AppTheme.textMutedLight,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
   }
 
-  Widget _buildMiniTag(String text, Color color) {
+  Widget _buildMiniTag(String text, bool isDark, {bool isVerified = false}) {
+    final bg = isVerified
+        ? (isDark ? const Color(0xFF0F4335) : const Color(0xFFD3EFE5))
+        : (isDark ? const Color(0xFF143B33) : const Color(0xFFFEEDBA));
+    final fg = isVerified
+        ? (isDark ? const Color(0xFF4ADE80) : const Color(0xFF045842))
+        : (isDark ? AppTheme.butter : AppTheme.forestGreen);
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(6),
+        color: bg,
+        borderRadius: BorderRadius.circular(7),
+        border: Border.all(
+          color: isDark
+              ? const Color(0xFF23695B).withValues(alpha: 0.5)
+              : const Color(0xFFE2C988).withValues(alpha: 0.8),
+          width: 0.8,
+        ),
       ),
       child: Text(
         text,
-        style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.w700),
+        style: TextStyle(color: fg, fontSize: 10, fontWeight: FontWeight.w700),
       ),
     );
   }
@@ -729,19 +762,25 @@ class _GuestHomeScreenState extends State<GuestHomeScreen> {
 
           // Active Booking Card
           Container(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(22),
             decoration: BoxDecoration(
               gradient: const LinearGradient(
-                colors: [AppTheme.forestGreen, AppTheme.forestGreenLight],
+                colors: [Color(0xFF014B43), Color(0xFF002722)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(22),
+              border: Border.all(
+                color: AppTheme.butter.withValues(alpha: 0.35),
+                width: 1.2,
+              ),
               boxShadow: [
                 BoxShadow(
-                  color: AppTheme.cyan.withValues(alpha: 0.25),
-                  blurRadius: 18,
-                  offset: const Offset(0, 6),
+                  color: isDark
+                      ? Colors.black.withValues(alpha: 0.75)
+                      : AppTheme.forestGreen.withValues(alpha: 0.35),
+                  blurRadius: 20,
+                  offset: const Offset(0, 8),
                 ),
               ],
             ),
@@ -752,22 +791,26 @@ class _GuestHomeScreenState extends State<GuestHomeScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                       decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.2),
+                        color: AppTheme.butter.withValues(alpha: 0.18),
                         borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: AppTheme.butter.withValues(alpha: 0.35),
+                          width: 0.8,
+                        ),
                       ),
                       child: const Row(
                         children: [
-                          Icon(Icons.circle, size: 8, color: Colors.black),
+                          Icon(Icons.circle, size: 8, color: AppTheme.butter),
                           SizedBox(width: 6),
                           Text(
                             'ACTIVE SESSION',
                             style: TextStyle(
-                              color: Colors.black,
+                              color: AppTheme.butter,
                               fontWeight: FontWeight.w800,
                               fontSize: 11,
-                              letterSpacing: 0.5,
+                              letterSpacing: 0.6,
                             ),
                           ),
                         ],
@@ -776,9 +819,10 @@ class _GuestHomeScreenState extends State<GuestHomeScreen> {
                     const Text(
                       'Bay A4',
                       style: TextStyle(
-                        color: Colors.black,
+                        color: AppTheme.butter,
                         fontWeight: FontWeight.w900,
                         fontSize: 16,
+                        letterSpacing: 0.5,
                       ),
                     ),
                   ],
@@ -787,7 +831,7 @@ class _GuestHomeScreenState extends State<GuestHomeScreen> {
                 const Text(
                   'Metro Grand Parking Bay',
                   style: TextStyle(
-                    color: Colors.black,
+                    color: AppTheme.butter,
                     fontWeight: FontWeight.w800,
                     fontSize: 20,
                   ),
@@ -796,7 +840,7 @@ class _GuestHomeScreenState extends State<GuestHomeScreen> {
                 Text(
                   'Valid Today • 10:00 AM - 12:00 PM (2 hrs)',
                   style: TextStyle(
-                    color: Colors.black.withValues(alpha: 0.75),
+                    color: AppTheme.butter.withValues(alpha: 0.85),
                     fontWeight: FontWeight.w600,
                     fontSize: 13,
                   ),
@@ -807,11 +851,13 @@ class _GuestHomeScreenState extends State<GuestHomeScreen> {
                     Expanded(
                       child: ElevatedButton.icon(
                         icon: const Icon(Icons.camera_alt_outlined, size: 16),
-                        label: const Text('Capture Photo', style: TextStyle(fontSize: 13)),
+                        label: const Text('Capture Photo', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800)),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.black,
-                          foregroundColor: Colors.white,
+                          backgroundColor: AppTheme.butter,
+                          foregroundColor: AppTheme.forestGreenDark,
+                          elevation: 0,
                           minimumSize: const Size.fromHeight(44),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                         ),
                         onPressed: () {
                           context.push(
@@ -825,11 +871,12 @@ class _GuestHomeScreenState extends State<GuestHomeScreen> {
                     Expanded(
                       child: OutlinedButton.icon(
                         icon: const Icon(Icons.navigation_outlined, size: 16),
-                        label: const Text('Navigate', style: TextStyle(fontSize: 13)),
+                        label: const Text('Navigate', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800)),
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.black,
-                          side: const BorderSide(color: Colors.black, width: 1.5),
+                          foregroundColor: AppTheme.butter,
+                          side: const BorderSide(color: AppTheme.butter, width: 1.5),
                           minimumSize: const Size.fromHeight(44),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                         ),
                         onPressed: () {
                           context.push('/search', extra: 'Metro Grand Parking Bay');
@@ -877,6 +924,8 @@ class _GuestHomeScreenState extends State<GuestHomeScreen> {
     required String rate,
     required String ref,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return NeumorphicCard(
       padding: const EdgeInsets.all(16),
       radius: 16,
@@ -885,8 +934,11 @@ class _GuestHomeScreenState extends State<GuestHomeScreen> {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: AppTheme.success.withValues(alpha: 0.12),
+              color: AppTheme.success.withValues(alpha: isDark ? 0.22 : 0.12),
               borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: AppTheme.success.withValues(alpha: isDark ? 0.45 : 0.25),
+              ),
             ),
             child: const Icon(Icons.check_circle_rounded, color: AppTheme.success, size: 20),
           ),
@@ -897,14 +949,19 @@ class _GuestHomeScreenState extends State<GuestHomeScreen> {
               children: [
                 Text(
                   name,
-                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                  style: TextStyle(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 14,
+                    color: isDark ? AppTheme.butter : AppTheme.forestGreen,
+                  ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   date,
                   style: TextStyle(
-                    color: Theme.of(context).colorScheme.outline,
+                    color: isDark ? const Color(0xFFD6EAE5) : AppTheme.textSecondaryLight,
                     fontSize: 12,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
               ],
@@ -915,14 +972,19 @@ class _GuestHomeScreenState extends State<GuestHomeScreen> {
             children: [
               Text(
                 rate,
-                style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
+                style: TextStyle(
+                  fontWeight: FontWeight.w900,
+                  fontSize: 16,
+                  color: isDark ? AppTheme.accentGold : AppTheme.forestGreen,
+                ),
               ),
               const SizedBox(height: 2),
               Text(
                 ref,
                 style: TextStyle(
-                  color: Theme.of(context).colorScheme.outline,
+                  color: isDark ? const Color(0xFFA5C9C1) : AppTheme.textMutedLight,
                   fontSize: 11,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             ],
@@ -1000,12 +1062,13 @@ class _GuestHomeScreenState extends State<GuestHomeScreen> {
                 tileColor: Theme.of(context).colorScheme.surface,
                 leading: Icon(
                   isNight ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
-                  color: isNight ? const Color(0xFFFFB800) : const Color(0xFF0284C7),
+                  color: isNight ? AppTheme.accentGold : AppTheme.forestGreen,
                 ),
                 title: const Text('Theme Mode', style: TextStyle(fontWeight: FontWeight.w600)),
                 subtitle: Text(isNight ? 'Night Mode (Active)' : 'Bright Mode (Active)'),
                 trailing: Switch(
                   value: isNight,
+                  activeThumbColor: AppTheme.accentGold,
                   onChanged: (val) => toggleThemeMode(),
                 ),
               );
@@ -1018,7 +1081,7 @@ class _GuestHomeScreenState extends State<GuestHomeScreen> {
           ListTile(
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
             tileColor: Theme.of(context).colorScheme.surface,
-            leading: const Icon(Icons.language_rounded, color: AppTheme.cyan),
+            leading: Icon(Icons.language_rounded, color: isDark ? AppTheme.butter : AppTheme.forestGreen),
             title: const Text('App Language', style: TextStyle(fontWeight: FontWeight.w600)),
             subtitle: Text(
               appLocale.value.languageCode == 'mr'
@@ -1035,7 +1098,7 @@ class _GuestHomeScreenState extends State<GuestHomeScreen> {
           ListTile(
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
             tileColor: Theme.of(context).colorScheme.surface,
-            leading: const Icon(Icons.directions_car_rounded, color: AppTheme.violet),
+            leading: Icon(Icons.directions_car_rounded, color: isDark ? AppTheme.accentGold : AppTheme.forestGreen),
             title: const Text('My Vehicles', style: TextStyle(fontWeight: FontWeight.w600)),
             subtitle: const Text('Register vehicle dimensions for bay fitting'),
             trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14),
@@ -1077,6 +1140,7 @@ class _GuestHomeScreenState extends State<GuestHomeScreen> {
   }
 
   void _showLanguageModal(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     showModalBottomSheet(
       context: context,
       backgroundColor: Theme.of(context).colorScheme.surface,
@@ -1101,7 +1165,7 @@ class _GuestHomeScreenState extends State<GuestHomeScreen> {
                 leading: const Text('🇬🇧', style: TextStyle(fontSize: 22)),
                 title: const Text('English'),
                 trailing: appLocale.value.languageCode == 'en'
-                    ? const Icon(Icons.check_circle_rounded, color: AppTheme.cyan)
+                    ? Icon(Icons.check_circle_rounded, color: isDark ? AppTheme.butter : AppTheme.forestGreen)
                     : null,
                 onTap: () {
                   appLocale.value = const Locale('en');
@@ -1112,7 +1176,7 @@ class _GuestHomeScreenState extends State<GuestHomeScreen> {
                 leading: const Text('🇮🇳', style: TextStyle(fontSize: 22)),
                 title: const Text('मराठी (Marathi)'),
                 trailing: appLocale.value.languageCode == 'mr'
-                    ? const Icon(Icons.check_circle_rounded, color: AppTheme.cyan)
+                    ? Icon(Icons.check_circle_rounded, color: isDark ? AppTheme.butter : AppTheme.forestGreen)
                     : null,
                 onTap: () {
                   appLocale.value = const Locale('mr');
@@ -1123,7 +1187,7 @@ class _GuestHomeScreenState extends State<GuestHomeScreen> {
                 leading: const Text('🇮🇳', style: TextStyle(fontSize: 22)),
                 title: const Text('हिंदी (Hindi)'),
                 trailing: appLocale.value.languageCode == 'hi'
-                    ? const Icon(Icons.check_circle_rounded, color: AppTheme.cyan)
+                    ? Icon(Icons.check_circle_rounded, color: isDark ? AppTheme.butter : AppTheme.forestGreen)
                     : null,
                 onTap: () {
                   appLocale.value = const Locale('hi');

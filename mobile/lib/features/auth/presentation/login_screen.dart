@@ -172,7 +172,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
                               color: Theme.of(context).dividerTheme.color ??
-                                  const Color(0xFF1C2A42),
+                                  (isDark ? AppTheme.borderDark : AppTheme.borderLight),
                             ),
                           ),
                           child: Row(

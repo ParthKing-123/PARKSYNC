@@ -73,7 +73,7 @@ class BookingConfirmationScreen extends StatelessWidget {
               Text(
                 'Confirmed by Parking Host • Bay A4 Reserved',
                 style: TextStyle(
-                  color: isDark ? AppTheme.cyan : AppTheme.cyanLight,
+                  color: isDark ? AppTheme.butter : AppTheme.forestGreen,
                   fontWeight: FontWeight.w700,
                   fontSize: 13,
                 ),

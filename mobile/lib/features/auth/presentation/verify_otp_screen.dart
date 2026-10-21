@@ -210,7 +210,7 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
                       color: Theme.of(context).colorScheme.surface,
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(
-                        color: Theme.of(context).dividerTheme.color ?? const Color(0xFF1C2A42),
+                        color: Theme.of(context).dividerTheme.color ?? (isDark ? AppTheme.borderDark : AppTheme.borderLight),
                       ),
                     ),
                     child: Text(

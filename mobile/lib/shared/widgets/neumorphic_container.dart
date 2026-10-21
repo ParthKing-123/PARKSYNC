@@ -106,15 +106,82 @@ class _NeumorphicButtonState extends State<NeumorphicButton> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final enabled = widget.onPressed != null;
 
-    Color bg;
     Color fg;
 
+    Gradient? gradient;
+    Border? border;
+
     if (widget.isPrimary) {
-      bg = isDark ? AppTheme.butter : AppTheme.forestGreen;
-      fg = isDark ? AppTheme.forestGreenDark : AppTheme.butter;
+      if (isDark) {
+        fg = AppTheme.forestGreenDark;
+        gradient = _isDown
+            ? const LinearGradient(
+                colors: [Color(0xFFEADB98), Color(0xFFFFF0B8)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              )
+            : const LinearGradient(
+                colors: [Color(0xFFFFFBF0), Color(0xFFF5DF9E)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              );
+        border = Border.all(
+          color: const Color(0xFFFFFFFF).withValues(alpha: 0.85),
+          width: 1.0,
+        );
+      } else {
+        fg = AppTheme.butter;
+        gradient = _isDown
+            ? const LinearGradient(
+                colors: [Color(0xFF002F2A), Color(0xFF0A584F)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              )
+            : const LinearGradient(
+                colors: [Color(0xFF0A534A), Color(0xFF013630)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              );
+        border = Border.all(
+          color: const Color(0xFF136E62).withValues(alpha: 0.65),
+          width: 1.0,
+        );
+      }
     } else {
-      bg = isDark ? AppTheme.bgSurfaceDark : AppTheme.bgSurfaceLight;
       fg = isDark ? AppTheme.butter : AppTheme.forestGreen;
+      if (isDark) {
+        gradient = _isDown
+            ? const LinearGradient(
+                colors: [Color(0xFF071E1A), Color(0xFF10362E)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              )
+            : const LinearGradient(
+                colors: [Color(0xFF143E35), Color(0xFF0A2621)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              );
+        border = Border.all(
+          color: const Color(0xFF23695B).withValues(alpha: 0.65),
+          width: 1.0,
+        );
+      } else {
+        gradient = _isDown
+            ? const LinearGradient(
+                colors: [Color(0xFFF0DC9D), Color(0xFFFFFBE8)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              )
+            : const LinearGradient(
+                colors: [Color(0xFFFFFDF5), Color(0xFFF7E5B0)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              );
+        border = Border.all(
+          color: const Color(0xFFFFFFFF).withValues(alpha: 0.85),
+          width: 1.0,
+        );
+      }
     }
 
     return GestureDetector(
@@ -131,11 +198,12 @@ class _NeumorphicButtonState extends State<NeumorphicButton> {
           height: widget.height,
           padding: widget.padding ?? const EdgeInsets.symmetric(horizontal: 20),
           decoration: BoxDecoration(
-            color: bg,
+            gradient: gradient,
             borderRadius: BorderRadius.circular(widget.radius),
+            border: border,
             boxShadow: _isDown
                 ? AppTheme.neumorphicPressedShadows(isDark: isDark)
-                : AppTheme.neumorphicShadows(isDark: isDark, distance: 3.5, blur: 8),
+                : AppTheme.neumorphicShadows(isDark: isDark, distance: 4.5, blur: 12),
           ),
           child: Center(
             child: DefaultTextStyle(
@@ -175,19 +243,34 @@ class NeumorphicIconBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg = color ?? (isDark ? AppTheme.bgSurfaceDark : AppTheme.bgSurfaceLight);
     final fg = iconColor ?? (isDark ? AppTheme.butter : AppTheme.forestGreen);
+
+    final Gradient gradient = color != null
+        ? LinearGradient(colors: [color!, color!])
+        : (isDark
+            ? const LinearGradient(
+                colors: [Color(0xFF143E35), Color(0xFF0A2621)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              )
+            : const LinearGradient(
+                colors: [Color(0xFFFFFDF5), Color(0xFFF7E5B0)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ));
 
     final widget = Container(
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: bg,
+        gradient: gradient,
         shape: BoxShape.circle,
-        boxShadow: AppTheme.neumorphicShadows(isDark: isDark, distance: 2.5, blur: 6),
+        boxShadow: AppTheme.neumorphicShadows(isDark: isDark, distance: 3.5, blur: 10),
         border: Border.all(
-          color: isDark ? AppTheme.forestHighlight.withValues(alpha: 0.3) : AppTheme.butterHighlight.withValues(alpha: 0.8),
-          width: 0.8,
+          color: isDark
+              ? const Color(0xFF23695B).withValues(alpha: 0.65)
+              : const Color(0xFFFFFFFF).withValues(alpha: 0.85),
+          width: 1.0,
         ),
       ),
       child: Center(

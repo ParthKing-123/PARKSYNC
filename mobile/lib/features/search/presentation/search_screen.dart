@@ -371,7 +371,7 @@ class _SearchScreenState extends State<SearchScreen> {
                       setSheetState(() => _filterCompatible = val);
                       setState(() => _filterCompatible = val);
                     },
-                    activeThumbColor: AppTheme.cyan,
+                    activeThumbColor: AppTheme.accentGold,
                     contentPadding: EdgeInsets.zero,
                   ),
                   SwitchListTile(
@@ -384,7 +384,7 @@ class _SearchScreenState extends State<SearchScreen> {
                       setSheetState(() => _filterCovered = val);
                       setState(() => _filterCovered = val);
                     },
-                    activeThumbColor: AppTheme.cyan,
+                    activeThumbColor: AppTheme.accentGold,
                     contentPadding: EdgeInsets.zero,
                   ),
                   SwitchListTile(
@@ -397,7 +397,7 @@ class _SearchScreenState extends State<SearchScreen> {
                       setSheetState(() => _filterCctv = val);
                       setState(() => _filterCctv = val);
                     },
-                    activeThumbColor: AppTheme.cyan,
+                    activeThumbColor: AppTheme.accentGold,
                     contentPadding: EdgeInsets.zero,
                   ),
                   const SizedBox(height: 24),
@@ -430,12 +430,12 @@ class _SearchScreenState extends State<SearchScreen> {
           height: 44,
           child: Container(
             decoration: BoxDecoration(
-              color: AppTheme.cyan.withValues(alpha: 0.25),
+              color: (isDark ? AppTheme.accentGold : AppTheme.forestGreen).withValues(alpha: 0.25),
               shape: BoxShape.circle,
-              border: Border.all(color: AppTheme.cyan, width: 2.5),
+              border: Border.all(color: isDark ? AppTheme.accentGold : AppTheme.forestGreen, width: 2.5),
             ),
-            child: const Center(
-              child: Icon(Icons.my_location_rounded, color: AppTheme.cyan, size: 22),
+            child: Center(
+              child: Icon(Icons.my_location_rounded, color: isDark ? AppTheme.accentGold : AppTheme.forestGreen, size: 22),
             ),
           ),
         ),
@@ -717,7 +717,7 @@ class _SearchScreenState extends State<SearchScreen> {
                         color: Theme.of(context).colorScheme.surface,
                         borderRadius: BorderRadius.circular(14),
                         border: Border.all(
-                          color: Theme.of(context).dividerTheme.color ?? const Color(0xFF1C2A42),
+                          color: Theme.of(context).dividerTheme.color ?? (isDark ? AppTheme.borderDark : AppTheme.borderLight),
                         ),
                         boxShadow: [
                           BoxShadow(
@@ -732,7 +732,7 @@ class _SearchScreenState extends State<SearchScreen> {
                         children: _osmSearchResults.map((item) {
                           return ListTile(
                             dense: true,
-                            leading: const Icon(Icons.location_on_rounded, size: 18, color: AppTheme.cyan),
+                            leading: Icon(Icons.location_on_rounded, size: 18, color: isDark ? AppTheme.accentGold : AppTheme.forestGreen),
                             title: Text(
                               item['name'],
                               maxLines: 1,
@@ -853,7 +853,7 @@ class _SearchScreenState extends State<SearchScreen> {
                                 color: Theme.of(context).colorScheme.surface,
                                 borderRadius: BorderRadius.circular(16),
                                 border: Border.all(
-                                  color: Theme.of(context).dividerTheme.color ?? const Color(0xFF1C2A42),
+                                  color: Theme.of(context).dividerTheme.color ?? (isDark ? AppTheme.borderDark : AppTheme.borderLight),
                                 ),
                               ),
                               child: const Center(
@@ -919,18 +919,19 @@ class _SearchScreenState extends State<SearchScreen> {
                 Expanded(
                   child: Text(
                     spot.name,
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          fontWeight: FontWeight.w800,
-                          fontSize: 14,
-                        ),
+                    style: TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 14,
+                      color: isDark ? AppTheme.butter : AppTheme.forestGreen,
+                    ),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
                 Text(
                   '₹${spot.ratePerHour.toInt()}/hr',
                   style: TextStyle(
-                    color: isDark ? AppTheme.butter : AppTheme.forestGreen,
-                    fontWeight: FontWeight.w800,
+                    color: isDark ? AppTheme.accentGold : AppTheme.forestGreen,
+                    fontWeight: FontWeight.w900,
                     fontSize: 16,
                   ),
                 ),
@@ -939,7 +940,11 @@ class _SearchScreenState extends State<SearchScreen> {
             const SizedBox(height: 3),
             Text(
               '${spot.distanceKm} km away • ${spot.area}',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 11),
+              style: TextStyle(
+                color: isDark ? const Color(0xFFD6EAE5) : AppTheme.textSecondaryLight,
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+              ),
             ),
             const Spacer(),
             Row(
@@ -948,8 +953,11 @@ class _SearchScreenState extends State<SearchScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
                   decoration: BoxDecoration(
-                    color: AppTheme.success.withValues(alpha: 0.15),
+                    color: AppTheme.success.withValues(alpha: isDark ? 0.22 : 0.15),
                     borderRadius: BorderRadius.circular(6),
+                    border: Border.all(
+                      color: AppTheme.success.withValues(alpha: isDark ? 0.45 : 0.25),
+                    ),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -982,11 +990,11 @@ class _SearchScreenState extends State<SearchScreen> {
             const SizedBox(height: 8),
             Row(
               children: [
-                if (spot.isCovered) _buildChip('Covered Bay'),
+                if (spot.isCovered) _buildChip('Covered Bay', isDark),
                 const SizedBox(width: 6),
-                if (spot.hasCctv) _buildChip('CCTV 24/7'),
+                if (spot.hasCctv) _buildChip('CCTV 24/7', isDark),
                 const SizedBox(width: 6),
-                _buildChip('Host Verified ✓'),
+                _buildChip('Host Verified ✓', isDark),
               ],
             ),
           ],
@@ -995,19 +1003,23 @@ class _SearchScreenState extends State<SearchScreen> {
     );
   }
 
-  Widget _buildChip(String text) {
+  Widget _buildChip(String text, bool isDark) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        color: isDark ? const Color(0xFF143B33) : Theme.of(context).colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(6),
+        border: Border.all(
+          color: isDark ? const Color(0xFF23695B).withValues(alpha: 0.5) : AppTheme.borderLight,
+          width: 0.8,
+        ),
       ),
       child: Text(
         text,
         style: TextStyle(
-          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.75),
+          color: isDark ? AppTheme.butter : AppTheme.forestGreen,
           fontSize: 9,
-          fontWeight: FontWeight.w600,
+          fontWeight: FontWeight.w700,
         ),
       ),
     );

@@ -179,13 +179,16 @@ class _ParkingDetailScreenState extends State<ParkingDetailScreen> {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: AppTheme.cyan.withValues(alpha: 0.15),
+                          color: isDark ? const Color(0xFF143B33) : AppTheme.butterElevated,
                           borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: isDark ? const Color(0xFF23695B) : AppTheme.borderLight,
+                          ),
                         ),
                         child: Text(
                           '₹${_hourlyRate.toInt()}/hr',
                           style: TextStyle(
-                            color: isDark ? AppTheme.cyan : AppTheme.cyanLight,
+                            color: isDark ? AppTheme.accentGold : AppTheme.forestGreen,
                             fontWeight: FontWeight.w800,
                             fontSize: 12,
                           ),
@@ -206,13 +209,13 @@ class _ParkingDetailScreenState extends State<ParkingDetailScreen> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              const Text(
+                              Text(
                                 '1. DATE (1 YEAR BOOKINGS OPEN)',
                                 style: TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w800,
                                   letterSpacing: 0.8,
-                                  color: AppTheme.cyan,
+                                  color: isDark ? AppTheme.butter : AppTheme.forestGreen,
                                 ),
                               ),
                               TextButton.icon(
@@ -265,13 +268,13 @@ class _ParkingDetailScreenState extends State<ParkingDetailScreen> {
                           // ══════════════════════════════════════════════
                           // 2. STARTING TIME SLOT
                           // ══════════════════════════════════════════════
-                          const Text(
+                          Text(
                             '2. STARTING TIME SLOT',
                             style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.w800,
                               letterSpacing: 0.8,
-                              color: AppTheme.cyan,
+                              color: isDark ? AppTheme.butter : AppTheme.forestGreen,
                             ),
                           ),
                           const SizedBox(height: 8),
@@ -303,16 +306,16 @@ class _ParkingDetailScreenState extends State<ParkingDetailScreen> {
                                             .surfaceContainerHighest
                                             .withValues(alpha: 0.4)
                                         : (isSelected
-                                            ? AppTheme.cyan.withValues(alpha: isDark ? 0.2 : 0.25)
+                                            ? (isDark ? AppTheme.butter : AppTheme.forestGreen)
                                             : Theme.of(context)
                                                 .colorScheme
                                                 .surfaceContainerHighest),
                                     borderRadius: BorderRadius.circular(12),
                                     border: Border.all(
                                       color: isSelected
-                                          ? AppTheme.cyan
+                                          ? (isDark ? AppTheme.butter : AppTheme.forestGreen)
                                           : (Theme.of(context).dividerTheme.color ??
-                                              const Color(0xFF1C2A42)),
+                                              (isDark ? AppTheme.borderDark : AppTheme.borderLight)),
                                       width: isSelected ? 1.5 : 1,
                                     ),
                                   ),
@@ -328,8 +331,8 @@ class _ParkingDetailScreenState extends State<ParkingDetailScreen> {
                                               ? Theme.of(context).colorScheme.outline
                                               : (isSelected
                                                   ? (isDark
-                                                      ? AppTheme.cyan
-                                                      : AppTheme.cyanLight)
+                                                      ? AppTheme.forestGreenDark
+                                                      : AppTheme.butter)
                                                   : Theme.of(context).colorScheme.onSurface),
                                         ),
                                       ),
@@ -338,12 +341,14 @@ class _ParkingDetailScreenState extends State<ParkingDetailScreen> {
                                         status,
                                         style: TextStyle(
                                           fontSize: 9,
-                                          fontWeight: FontWeight.w600,
+                                          fontWeight: FontWeight.w700,
                                           color: isReserved
                                               ? AppTheme.error
-                                              : (status == 'Filling Fast'
-                                                  ? AppTheme.amber
-                                                  : AppTheme.success),
+                                              : (isSelected
+                                                  ? (isDark ? AppTheme.forestGreenDark : AppTheme.butter)
+                                                  : (status == 'Filling Fast'
+                                                      ? AppTheme.amber
+                                                      : AppTheme.success)),
                                         ),
                                       ),
                                     ],
@@ -361,13 +366,13 @@ class _ParkingDetailScreenState extends State<ParkingDetailScreen> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              const Text(
+                              Text(
                                 '3. DURATION (MIN 30 MINS)',
                                 style: TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w800,
                                   letterSpacing: 0.8,
-                                  color: AppTheme.cyan,
+                                  color: isDark ? AppTheme.butter : AppTheme.forestGreen,
                                 ),
                               ),
                               Text(
@@ -375,7 +380,7 @@ class _ParkingDetailScreenState extends State<ParkingDetailScreen> {
                                 style: TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w800,
-                                  color: isDark ? AppTheme.cyan : AppTheme.cyanLight,
+                                  color: isDark ? AppTheme.accentGold : AppTheme.forestGreen,
                                 ),
                               ),
                             ],
@@ -388,6 +393,11 @@ class _ParkingDetailScreenState extends State<ParkingDetailScreen> {
                             runSpacing: 6,
                             children: [30, 45, 60, 90, 120, 180].map((mins) {
                               final isSelected = _durationMinutes == mins;
+                              final selectedBg = isDark ? AppTheme.butter : AppTheme.forestGreen;
+                              final selectedFg = isDark ? AppTheme.forestGreenDark : AppTheme.butter;
+                              final unselectedBg = isDark ? const Color(0xFF143B33) : AppTheme.butterElevated;
+                              final unselectedFg = isDark ? AppTheme.butter : AppTheme.forestGreen;
+
                               return ChoiceChip(
                                 label: Text(mins < 60 ? '$mins m' : '${mins / 60} h'),
                                 selected: isSelected,
@@ -401,13 +411,12 @@ class _ParkingDetailScreenState extends State<ParkingDetailScreen> {
                                     _customMinutesCtrl.text = mins.toString();
                                   });
                                 },
-                                selectedColor: AppTheme.cyan.withValues(alpha: isDark ? 0.2 : 0.25),
+                                backgroundColor: unselectedBg,
+                                selectedColor: selectedBg,
                                 labelStyle: TextStyle(
                                   fontSize: 12,
-                                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                                  color: isSelected
-                                      ? (isDark ? AppTheme.cyan : AppTheme.cyanLight)
-                                      : Theme.of(context).colorScheme.onSurface,
+                                  fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                                  color: isSelected ? selectedFg : unselectedFg,
                                 ),
                               );
                             }).toList(),
@@ -618,6 +627,7 @@ class _ParkingDetailScreenState extends State<ParkingDetailScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (context) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
         return Padding(
           padding: const EdgeInsets.all(28.0),
           child: Column(
@@ -628,11 +638,14 @@ class _ParkingDetailScreenState extends State<ParkingDetailScreen> {
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: AppTheme.cyan.withValues(alpha: 0.12),
+                  color: isDark ? const Color(0xFF143B33) : AppTheme.forestGreen.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: isDark ? const Color(0xFF23695B) : AppTheme.borderLight,
+                  ),
                 ),
-                child: const Icon(Icons.lock_outline_rounded,
-                    color: AppTheme.cyan, size: 24),
+                child: Icon(Icons.lock_outline_rounded,
+                    color: isDark ? AppTheme.butter : AppTheme.forestGreen, size: 24),
               ),
               const SizedBox(height: 16),
               const Text(
@@ -712,8 +725,8 @@ class _ParkingDetailScreenState extends State<ParkingDetailScreen> {
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                     colors: [
-                      Color(0xFF142036),
-                      Color(0xFF0A0F1E),
+                      Color(0xFF0C3029),
+                      Color(0xFF031411),
                     ],
                   ),
                 ),
@@ -724,32 +737,34 @@ class _ParkingDetailScreenState extends State<ParkingDetailScreen> {
                       Container(
                         padding: const EdgeInsets.all(18),
                         decoration: BoxDecoration(
-                          color: AppTheme.cyan.withValues(alpha: 0.12),
+                          color: AppTheme.butter.withValues(alpha: 0.15),
                           shape: BoxShape.circle,
                           border: Border.all(
-                            color: AppTheme.cyan.withValues(alpha: 0.3),
+                            color: AppTheme.butter.withValues(alpha: 0.35),
+                            width: 1.2,
                           ),
                         ),
                         child: const Icon(
                           Icons.local_parking_rounded,
                           size: 50,
-                          color: AppTheme.cyan,
+                          color: AppTheme.butter,
                         ),
                       ),
                       const SizedBox(height: 10),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
                         decoration: BoxDecoration(
-                          color: AppTheme.success.withValues(alpha: 0.15),
+                          color: AppTheme.success.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppTheme.success.withValues(alpha: 0.45)),
                         ),
                         child: const Text(
                           '● 4 BAYS AVAILABLE NOW',
                           style: TextStyle(
-                            color: AppTheme.success,
+                            color: Color(0xFF4ADE80),
                             fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0.5,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.6,
                           ),
                         ),
                       ),
@@ -762,114 +777,137 @@ class _ParkingDetailScreenState extends State<ParkingDetailScreen> {
 
           // Details content
           SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(22.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            child: Builder(
+              builder: (context) {
+                final isDark = Theme.of(context).brightness == Brightness.dark;
+
+                return Padding(
+                  padding: const EdgeInsets.all(22.0),
+                  child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Metro Grand Parking Bay',
-                              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                                    fontSize: 22,
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                            ),
-                            const SizedBox(height: 6),
-                            Row(
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Icon(Icons.location_on_outlined,
-                                    size: 16, color: Theme.of(context).colorScheme.outline),
-                                const SizedBox(width: 4),
                                 Text(
-                                  '0.3 km away • National Hub',
-                                  style: Theme.of(context).textTheme.bodyMedium,
+                                  'Metro Grand Parking Bay',
+                                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                                        fontSize: 22,
+                                        fontWeight: FontWeight.w800,
+                                        color: isDark ? AppTheme.butter : AppTheme.forestGreen,
+                                      ),
+                                ),
+                                const SizedBox(height: 6),
+                                Row(
+                                  children: [
+                                    Icon(Icons.location_on_outlined,
+                                        size: 16, color: isDark ? const Color(0xFFD6EAE5) : Theme.of(context).colorScheme.outline),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      '0.3 km away • National Hub',
+                                      style: TextStyle(
+                                        color: isDark ? const Color(0xFFD6EAE5) : AppTheme.textSecondaryLight,
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),
-                          ],
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: AppTheme.cyan.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                              color: AppTheme.cyan.withValues(alpha: 0.3)),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Text(
-                              '₹${_hourlyRate.toInt()}',
-                              style: const TextStyle(
-                                color: AppTheme.cyan,
-                                fontWeight: FontWeight.w800,
-                                fontSize: 20,
-                              ),
-                            ),
-                            const Text(
-                              '/ hour',
-                              style: TextStyle(
-                                color: AppTheme.cyan,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 22),
-
-                  // Vehicle Compatibility Banner
-                  NeumorphicCard(
-                    radius: 16,
-                    padding: const EdgeInsets.all(16),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: AppTheme.forestGreen.withValues(alpha: 0.15),
-                            shape: BoxShape.circle,
                           ),
-                          child: const Icon(Icons.check,
-                              color: AppTheme.forestGreen, size: 20),
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Vehicle Compatibility',
-                                style: Theme.of(context).textTheme.bodySmall,
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: isDark ? const Color(0xFF143B33) : AppTheme.butterElevated,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: isDark ? const Color(0xFF23695B) : AppTheme.borderLight,
+                                width: 1.0,
                               ),
-                              const SizedBox(height: 2),
-                              Text(
-                                isEn ? l.fitsYourVehicle : 'Fits standard passenger cars & SUVs ✓',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 14,
+                              boxShadow: AppTheme.neumorphicShadows(isDark: isDark, distance: 2.5, blur: 6),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Text(
+                                  '₹${_hourlyRate.toInt()}',
+                                  style: TextStyle(
+                                    color: isDark ? AppTheme.accentGold : AppTheme.forestGreen,
+                                    fontWeight: FontWeight.w900,
+                                    fontSize: 22,
+                                  ),
+                                ),
+                                Text(
+                                  '/ hour',
+                                  style: TextStyle(
+                                    color: isDark ? const Color(0xFFD6EAE5) : AppTheme.textMutedLight,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 22),
+
+                      // Vehicle Compatibility Banner
+                      NeumorphicCard(
+                        radius: 16,
+                        padding: const EdgeInsets.all(16),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: isDark ? const Color(0xFF143B33) : AppTheme.forestGreen.withValues(alpha: 0.12),
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: isDark ? const Color(0xFF23695B) : AppTheme.borderLight,
                                 ),
                               ),
-                            ],
-                          ),
+                              child: Icon(
+                                Icons.check_rounded,
+                                color: isDark ? AppTheme.butter : AppTheme.forestGreen,
+                                size: 20,
+                              ),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Vehicle Compatibility',
+                                    style: TextStyle(
+                                      color: isDark ? const Color(0xFFD6EAE5) : AppTheme.textMutedLight,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    isEn ? l.fitsYourVehicle : 'Fits standard passenger cars & SUVs ✓',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 14,
+                                      color: isDark ? AppTheme.butter : AppTheme.forestGreen,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                  ),
+                      ),
 
                   const SizedBox(height: 26),
 
@@ -1062,58 +1100,76 @@ class _ParkingDetailScreenState extends State<ParkingDetailScreen> {
                   const SizedBox(height: 110),
                 ],
               ),
-            ),
-          ),
-        ],
+            );
+          },
+        ),
       ),
+    ],
+  ),
 
       // Fixed Bottom CTA
-      bottomSheet: Container(
-        padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          border: Border(
-            top: BorderSide(
-              color: Theme.of(context).dividerTheme.color ?? const Color(0xFF1C2A42),
-              width: 1,
+      bottomSheet: Builder(
+        builder: (context) {
+          final isDark = Theme.of(context).brightness == Brightness.dark;
+
+          return Container(
+            padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surface,
+              border: Border(
+                top: BorderSide(
+                  color: Theme.of(context).dividerTheme.color ?? (isDark ? AppTheme.borderDark : AppTheme.borderLight),
+                  width: 1,
+                ),
+              ),
             ),
-          ),
-        ),
-        child: SafeArea(
-          child: Row(
-            children: [
-              Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
+            child: SafeArea(
+              child: Row(
                 children: [
-                  Text(
-                    'Starting from',
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.outline,
-                      fontSize: 11,
-                    ),
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Starting from',
+                        style: TextStyle(
+                          color: isDark ? const Color(0xFFD6EAE5) : Theme.of(context).colorScheme.outline,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '₹${_hourlyRate.toInt()} / hr',
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w900,
+                          color: isDark ? AppTheme.accentGold : AppTheme.forestGreen,
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '₹${_hourlyRate.toInt()} / hr',
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w900,
+                  const SizedBox(width: 20),
+                  Expanded(
+                    child: NeumorphicButton(
+                      height: 50,
+                      isPrimary: true,
+                      onPressed: _openBookingSheet,
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.calendar_today_rounded, size: 16),
+                          SizedBox(width: 8),
+                          Text('Select Time & Book', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
+                        ],
+                      ),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(width: 20),
-              Expanded(
-                child: NeumorphicButton(
-                  height: 48,
-                  onPressed: _openBookingSheet,
-                  child: const Text('Select Time & Book', style: TextStyle(fontWeight: FontWeight.w700)),
-                ),
-              ),
-            ],
-          ),
-        ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -1132,6 +1188,8 @@ class _FeatureItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 12.0),
       child: NeumorphicCard(
@@ -1143,10 +1201,14 @@ class _FeatureItem extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: AppTheme.forestGreen.withValues(alpha: 0.12),
+                color: isDark ? const Color(0xFF143B33) : AppTheme.forestGreen.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: isDark ? const Color(0xFF23695B) : AppTheme.borderLight,
+                  width: 0.8,
+                ),
               ),
-              child: Icon(icon, color: AppTheme.forestGreen, size: 20),
+              child: Icon(icon, color: isDark ? AppTheme.butter : AppTheme.forestGreen, size: 20),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -1155,14 +1217,19 @@ class _FeatureItem extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                    style: TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 14,
+                      color: isDark ? AppTheme.butter : AppTheme.forestGreen,
+                    ),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     subtitle,
                     style: TextStyle(
                       fontSize: 12,
-                      color: Theme.of(context).colorScheme.outline,
+                      color: isDark ? const Color(0xFFD6EAE5) : AppTheme.textSecondaryLight,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
                 ],
