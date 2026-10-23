@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../../../core/api_client.dart';
 import '../../../core/user_state_service.dart';
 import '../../../shared/theme/app_theme.dart';
 import '../../../shared/widgets/animated_floating_background.dart';
+import '../../../shared/widgets/car_loading_indicator.dart';
 import '../../../shared/widgets/neumorphic_container.dart';
 import '../../../shared/widgets/sweet_popup.dart';
 
@@ -16,6 +19,11 @@ class SeekerProfileScreen extends StatefulWidget {
 class _SeekerProfileScreenState extends State<SeekerProfileScreen> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
+
+  bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
   String _selectedCity = 'Pune';
   bool _isLoading = false;
 
@@ -46,6 +54,8 @@ class _SeekerProfileScreenState extends State<SeekerProfileScreen> {
   void dispose() {
     _nameController.dispose();
     _emailController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 
@@ -58,6 +68,8 @@ class _SeekerProfileScreenState extends State<SeekerProfileScreen> {
   void _saveProfile() async {
     final name = _nameController.text.trim();
     final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+    final confirmPassword = _confirmPasswordController.text.trim();
 
     if (name.length < 2) {
       SweetPopup.show(
@@ -81,25 +93,70 @@ class _SeekerProfileScreenState extends State<SeekerProfileScreen> {
       return;
     }
 
+    // Password validation
+    if (password.length < 6) {
+      SweetPopup.show(
+        context,
+        title: 'Password Too Short',
+        message: 'Please create a password of at least 6 characters.',
+        icon: Icons.lock_outline_rounded,
+        iconColor: AppTheme.error,
+      );
+      return;
+    }
+
+    if (password != confirmPassword) {
+      SweetPopup.show(
+        context,
+        title: 'Passwords Do Not Match',
+        message: 'Please re-type your password identically in both fields.',
+        icon: Icons.lock_reset_rounded,
+        iconColor: AppTheme.error,
+      );
+      return;
+    }
+
     setState(() => _isLoading = true);
 
+    final phone = UserStateService.instance.phoneNumber;
+
+    // 1. Persist to backend
+    try {
+      final response = await ApiClient().dio.post('/auth/register-profile', data: {
+        'phone': phone,
+        'name': name,
+        'email': email.isNotEmpty ? email : null,
+        'password': password,
+        'role': 'SEEKER',
+      });
+
+      if (response.data != null && response.data['token'] != null) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('jwt_token', response.data['token'].toString());
+      }
+    } catch (e) {
+      debugPrint('[Auth] Backend register-profile unreachable or error: $e');
+    }
+
+    // 2. Persist locally in UserStateService for direct 0-OTP login in future
+    await UserStateService.instance.savePassword(phone, password);
     await UserStateService.instance.updateProfile(
       name: name,
       email: email,
     );
 
-    setState(() => _isLoading = false);
-
     if (mounted) {
+      setState(() => _isLoading = false);
+
       SweetPopup.show(
         context,
-        title: 'Profile Updated!',
-        message: 'Welcome $name, let\'s add your vehicle for auto-compatibility.',
+        title: 'Profile & Password Created!',
+        message: 'Welcome $name! Password saved. You can now log in anytime without OTP.',
         icon: Icons.check_circle_rounded,
         iconColor: AppTheme.success,
       );
 
-      await Future.delayed(const Duration(milliseconds: 600));
+      await Future.delayed(const Duration(milliseconds: 700));
 
       if (mounted) {
         context.push('/seeker-vehicle-setup');
@@ -131,20 +188,13 @@ class _SeekerProfileScreenState extends State<SeekerProfileScreen> {
             ),
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => context.go('/guest-home'),
-            child: Text(
-              'Skip for now',
-              style: TextStyle(
-                fontWeight: FontWeight.w700,
-                fontSize: 13,
-                color: isDark ? AppTheme.accentGold : AppTheme.forestGreen,
+        title: Text(
+          'Step 1 of 2: Driver Profile',
+          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
               ),
-            ),
-          ),
-          const SizedBox(width: 8),
-        ],
+        ),
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
@@ -155,55 +205,52 @@ class _SeekerProfileScreenState extends State<SeekerProfileScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Step Pill
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: AppTheme.forestGreen.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: AppTheme.forestGreen.withValues(alpha: 0.3)),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 8,
-                        height: 8,
-                        decoration: const BoxDecoration(
-                          color: AppTheme.forestGreen,
-                          shape: BoxShape.circle,
+                // Step Progress Bar
+                Row(
+                  children: [
+                    Expanded(
+                      child: Container(
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: isDark ? AppTheme.accentGold : AppTheme.forestGreen,
+                          borderRadius: BorderRadius.circular(2),
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Step 1 of 2 • Driver Profile',
-                        style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                              color: isDark ? AppTheme.butter : AppTheme.forestGreen,
-                              fontWeight: FontWeight.w600,
-                            ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Container(
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: (isDark ? AppTheme.accentGold : AppTheme.forestGreen)
+                              .withValues(alpha: 0.25),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
 
-                const SizedBox(height: 20),
+                const SizedBox(height: 24),
 
+                // Header Info
                 Text(
-                  'Complete your\ndriver profile.',
+                  'Complete Your Profile',
                   style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                        fontSize: 32,
-                        letterSpacing: -1.0,
+                        fontSize: 26,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -0.5,
                       ),
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Hosts verify driver identity before parking check-in. Your details are strictly encrypted.',
+                  'Set up your driver details and security password for instant direct sign-in next time.',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         height: 1.5,
                       ),
                 ),
 
-                const SizedBox(height: 28),
+                const SizedBox(height: 24),
 
                 // Name Field (Required)
                 Text(
@@ -238,15 +285,13 @@ class _SeekerProfileScreenState extends State<SeekerProfileScreen> {
                         color: isDark ? AppTheme.accentGold : AppTheme.forestGreen,
                       ),
                       border: InputBorder.none,
-                      enabledBorder: InputBorder.none,
-                      focusedBorder: InputBorder.none,
                       filled: true,
                       fillColor: Colors.transparent,
                     ),
                   ),
                 ),
 
-                const SizedBox(height: 20),
+                const SizedBox(height: 18),
 
                 // Email Field (Optional)
                 Row(
@@ -301,15 +346,115 @@ class _SeekerProfileScreenState extends State<SeekerProfileScreen> {
                         color: isDark ? AppTheme.accentGold : AppTheme.forestGreen,
                       ),
                       border: InputBorder.none,
-                      enabledBorder: InputBorder.none,
-                      focusedBorder: InputBorder.none,
                       filled: true,
                       fillColor: Colors.transparent,
                     ),
                   ),
                 ),
 
-                const SizedBox(height: 20),
+                const SizedBox(height: 18),
+
+                // ── Create Password Field ────────────────────────────────────
+                Text(
+                  'Create Password *',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: isDark ? AppTheme.butter : AppTheme.forestGreen,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                NeumorphicCard(
+                  radius: 16,
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                  child: TextField(
+                    controller: _passwordController,
+                    obscureText: _obscurePassword,
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: _obscurePassword ? 2.0 : 0,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                    decoration: InputDecoration(
+                      hintText: 'Minimum 6 characters',
+                      hintStyle: TextStyle(
+                        color: Theme.of(context).colorScheme.outline,
+                        letterSpacing: 0,
+                        fontSize: 14,
+                      ),
+                      prefixIcon: Icon(
+                        Icons.lock_outline_rounded,
+                        size: 20,
+                        color: isDark ? AppTheme.accentGold : AppTheme.forestGreen,
+                      ),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _obscurePassword ? Icons.visibility_off_rounded : Icons.visibility_rounded,
+                          size: 20,
+                          color: Theme.of(context).colorScheme.outline,
+                        ),
+                        onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                      ),
+                      border: InputBorder.none,
+                      filled: true,
+                      fillColor: Colors.transparent,
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 18),
+
+                // ── Confirm Password Field ───────────────────────────────────
+                Text(
+                  'Confirm Password *',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: isDark ? AppTheme.butter : AppTheme.forestGreen,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                NeumorphicCard(
+                  radius: 16,
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                  child: TextField(
+                    controller: _confirmPasswordController,
+                    obscureText: _obscureConfirmPassword,
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: _obscureConfirmPassword ? 2.0 : 0,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                    decoration: InputDecoration(
+                      hintText: 'Re-enter your password',
+                      hintStyle: TextStyle(
+                        color: Theme.of(context).colorScheme.outline,
+                        letterSpacing: 0,
+                        fontSize: 14,
+                      ),
+                      prefixIcon: Icon(
+                        Icons.lock_reset_rounded,
+                        size: 20,
+                        color: isDark ? AppTheme.accentGold : AppTheme.forestGreen,
+                      ),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _obscureConfirmPassword ? Icons.visibility_off_rounded : Icons.visibility_rounded,
+                          size: 20,
+                          color: Theme.of(context).colorScheme.outline,
+                        ),
+                        onPressed: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
+                      ),
+                      border: InputBorder.none,
+                      filled: true,
+                      fillColor: Colors.transparent,
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 18),
 
                 // Primary City Selector
                 Text(
@@ -365,27 +510,29 @@ class _SeekerProfileScreenState extends State<SeekerProfileScreen> {
                   ),
                 ),
 
-                const SizedBox(height: 36),
+                const SizedBox(height: 32),
 
                 // Save & Continue Action
                 NeumorphicButton(
                   height: 52,
                   onPressed: _isLoading ? null : _saveProfile,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Text(
-                        'Continue to Vehicle Setup',
-                        style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
-                      ),
-                      const SizedBox(width: 8),
-                      Icon(
-                        Icons.arrow_forward_rounded,
-                        size: 18,
-                        color: isDark ? AppTheme.forestGreenDark : AppTheme.butter,
-                      ),
-                    ],
-                  ),
+                  child: _isLoading
+                      ? const CarLoadingIndicator(size: 26)
+                      : Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Text(
+                              'Save Password & Continue to Vehicle',
+                              style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
+                            ),
+                            const SizedBox(width: 8),
+                            Icon(
+                              Icons.arrow_forward_rounded,
+                              size: 18,
+                              color: isDark ? AppTheme.forestGreenDark : AppTheme.butter,
+                            ),
+                          ],
+                        ),
                 ),
 
                 const SizedBox(height: 16),

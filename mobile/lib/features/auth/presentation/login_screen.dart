@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/api_client.dart';
+import '../../../../core/user_state_service.dart';
 import '../../../../shared/theme/app_theme.dart';
 import '../../../../shared/widgets/car_loading_indicator.dart';
 import '../../../../shared/widgets/animated_floating_background.dart';
@@ -19,7 +20,12 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStateMixin {
   final _phoneController = TextEditingController();
+  final _identifierController = TextEditingController();
+  final _passwordController = TextEditingController();
+
   bool _isLoading = false;
+  bool _isSignUp = false; // false = Sign In (Password / Returning), true = Sign Up (OTP / New User)
+  bool _obscurePassword = true;
   int _selectedTabIndex = 0; // 0 = Seeker, 1 = Provider
 
   Country _selectedCountry = const Country(
@@ -32,6 +38,8 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   @override
   void dispose() {
     _phoneController.dispose();
+    _identifierController.dispose();
+    _passwordController.dispose();
     super.dispose();
   }
 
@@ -45,6 +53,83 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     }
   }
 
+  /// Direct Password Login for Returning Users (0 OTPs needed)
+  void _loginPassword() async {
+    final identifier = _identifierController.text.trim();
+    final password = _passwordController.text.trim();
+
+    if (identifier.isEmpty) {
+      SweetPopup.show(
+        context,
+        title: 'Input Required',
+        message: 'Please enter your mobile number or username.',
+        icon: Icons.person_outline_rounded,
+        iconColor: AppTheme.error,
+      );
+      return;
+    }
+
+    if (password.isEmpty) {
+      SweetPopup.show(
+        context,
+        title: 'Password Required',
+        message: 'Please enter your account password.',
+        icon: Icons.lock_outline_rounded,
+        iconColor: AppTheme.error,
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    final role = _selectedTabIndex == 0 ? UserRole.seeker : UserRole.provider;
+
+    try {
+      await UserStateService.instance.loginWithPassword(
+        identifier: identifier,
+        password: password,
+        role: role,
+      );
+
+      if (mounted) {
+        setState(() => _isLoading = false);
+        SweetPopup.show(
+          context,
+          title: 'Welcome Back!',
+          message: 'Signed in successfully. Direct access granted with 0 OTPs.',
+          icon: Icons.check_circle_rounded,
+          iconColor: AppTheme.success,
+        );
+
+        await Future.delayed(const Duration(milliseconds: 600));
+        if (!mounted) return;
+
+        if (role == UserRole.provider) {
+          if (UserStateService.instance.isProviderRegistered) {
+            context.go('/provider-home');
+          } else {
+            context.go('/provider-onboarding');
+          }
+        } else {
+          context.go('/guest-home');
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        final msg = e.toString().replaceFirst('Exception: ', '');
+        SweetPopup.show(
+          context,
+          title: 'Sign In Failed',
+          message: msg,
+          icon: Icons.lock_reset_rounded,
+          iconColor: AppTheme.error,
+        );
+      }
+    }
+  }
+
+  /// Send SMS OTP via MessageCentral for New User Signup
   void _sendOtp() async {
     final rawNumber = _phoneController.text.trim();
     if (rawNumber.length < 6) {
@@ -226,7 +311,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                         child: Column(
                           children: [
                             Text(
-                              'Login to Your Account',
+                              _isSignUp ? 'Create Your Account' : 'Welcome Back',
                               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                                     fontWeight: FontWeight.w800,
                                     fontSize: 20,
@@ -234,7 +319,9 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              'Choose your account type to continue',
+                              _isSignUp
+                                  ? 'Verify your mobile number to get started'
+                                  : 'Sign in to access your parking dashboard',
                               style: TextStyle(
                                 fontSize: 13,
                                 color: Theme.of(context).colorScheme.outline,
@@ -247,7 +334,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
 
                       const SizedBox(height: 20),
 
-                      // ── Sliding Role Tabs (Matching reference layout) ─────
+                      // ── Sliding Role Tabs (Parking Seeker vs Parking Provider) ───
                       Container(
                         decoration: BoxDecoration(
                           border: Border(
@@ -309,7 +396,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                               ),
                             ),
 
-                            // Admin / Parking Provider Tab
+                            // Parking Provider Tab
                             Expanded(
                               child: InkWell(
                                 onTap: () => setState(() => _selectedTabIndex = 1),
@@ -361,7 +448,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                         ),
                       ),
 
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 16),
 
                       // Informational badge for role
                       Container(
@@ -402,98 +489,99 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                         ),
                       ),
 
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 16),
 
-                      // Phone Input Field
-                      Text(
-                        'Mobile Number',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          color: isDark ? AppTheme.butter : AppTheme.forestGreen,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-
+                      // ── Sub-Toggle: Sign In (Returning) vs. Sign Up (New User) ─────
                       Container(
+                        height: 42,
+                        padding: const EdgeInsets.all(4),
                         decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.surface,
-                          borderRadius: BorderRadius.circular(14),
+                          color: isDark ? AppTheme.forestElevated : AppTheme.forestGreen.withValues(alpha: 0.06),
+                          borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                            color: Theme.of(context).dividerTheme.color ??
-                                (isDark ? AppTheme.borderDark : AppTheme.borderLight),
-                            width: 1.0,
+                            color: isDark
+                                ? const Color(0xFF23695B).withValues(alpha: 0.4)
+                                : AppTheme.borderLight,
+                            width: 1,
                           ),
                         ),
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                         child: Row(
                           children: [
-                            // Country Code Selector Button
-                            InkWell(
-                              onTap: _chooseCountry,
-                              borderRadius: BorderRadius.circular(8),
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(_selectedCountry.flag, style: const TextStyle(fontSize: 18)),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      _selectedCountry.dialCode,
+                            // Sign In Tab
+                            Expanded(
+                              child: GestureDetector(
+                                onTap: () => setState(() => _isSignUp = false),
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 200),
+                                  decoration: BoxDecoration(
+                                    color: !_isSignUp
+                                        ? (isDark ? AppTheme.forestGreen : AppTheme.forestGreen)
+                                        : Colors.transparent,
+                                    borderRadius: BorderRadius.circular(9),
+                                    boxShadow: !_isSignUp
+                                        ? [
+                                            BoxShadow(
+                                              color: (isDark ? Colors.black : AppTheme.forestGreen)
+                                                  .withValues(alpha: 0.2),
+                                              blurRadius: 4,
+                                              offset: const Offset(0, 2),
+                                            )
+                                          ]
+                                        : null,
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      'Sign In (Password)',
                                       style: TextStyle(
+                                        fontSize: 12,
                                         fontWeight: FontWeight.w800,
-                                        fontSize: 14,
-                                        color: isDark ? AppTheme.butter : AppTheme.forestGreen,
+                                        color: !_isSignUp
+                                            ? (isDark ? AppTheme.butter : Colors.white)
+                                            : (isDark
+                                                ? AppTheme.textSecondaryDark
+                                                : AppTheme.textSecondaryLight),
                                       ),
                                     ),
-                                    const SizedBox(width: 2),
-                                    Icon(
-                                      Icons.keyboard_arrow_down_rounded,
-                                      size: 16,
-                                      color: Theme.of(context).colorScheme.outline,
-                                    ),
-                                  ],
+                                  ),
                                 ),
                               ),
                             ),
-
-                            Container(
-                              height: 24,
-                              width: 1,
-                              color: Theme.of(context).dividerTheme.color ??
-                                  (isDark ? AppTheme.borderDark : AppTheme.borderLight),
-                              margin: const EdgeInsets.symmetric(horizontal: 8),
-                            ),
-
-                            // Phone Number Input
+                            // Sign Up Tab
                             Expanded(
-                              child: TextField(
-                                controller: _phoneController,
-                                keyboardType: TextInputType.phone,
-                                inputFormatters: [
-                                  FilteringTextInputFormatter.digitsOnly,
-                                  LengthLimitingTextInputFormatter(14),
-                                ],
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w700,
-                                  letterSpacing: 0.8,
-                                  color: Theme.of(context).colorScheme.onSurface,
-                                ),
-                                decoration: InputDecoration(
-                                  hintText: isEn ? l.mobileNumber : '98765 43210',
-                                  hintStyle: TextStyle(
-                                    color: Theme.of(context).colorScheme.outline,
-                                    letterSpacing: 0,
-                                    fontSize: 14,
+                              child: GestureDetector(
+                                onTap: () => setState(() => _isSignUp = true),
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 200),
+                                  decoration: BoxDecoration(
+                                    color: _isSignUp
+                                        ? (isDark ? AppTheme.forestGreen : AppTheme.forestGreen)
+                                        : Colors.transparent,
+                                    borderRadius: BorderRadius.circular(9),
+                                    boxShadow: _isSignUp
+                                        ? [
+                                            BoxShadow(
+                                              color: (isDark ? Colors.black : AppTheme.forestGreen)
+                                                  .withValues(alpha: 0.2),
+                                              blurRadius: 4,
+                                              offset: const Offset(0, 2),
+                                            )
+                                          ]
+                                        : null,
                                   ),
-                                  border: InputBorder.none,
-                                  enabledBorder: InputBorder.none,
-                                  focusedBorder: InputBorder.none,
-                                  filled: true,
-                                  fillColor: Colors.transparent,
-                                  contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                                  child: Center(
+                                    child: Text(
+                                      'Sign Up (New User)',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w800,
+                                        color: _isSignUp
+                                            ? (isDark ? AppTheme.butter : Colors.white)
+                                            : (isDark
+                                                ? AppTheme.textSecondaryDark
+                                                : AppTheme.textSecondaryLight),
+                                      ),
+                                    ),
+                                  ),
                                 ),
                               ),
                             ),
@@ -501,51 +589,334 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                         ),
                       ),
 
-                      const SizedBox(height: 14),
+                      const SizedBox(height: 20),
 
-                      Row(
-                        children: [
-                          Icon(Icons.shield_outlined,
-                              size: 13, color: Theme.of(context).colorScheme.outline),
-                          const SizedBox(width: 6),
-                          Text(
-                            'Instant SMS verification code',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 11),
+                      // ════════════════════════════════════════════════════════
+                      // MODE A: SIGN IN (PASSWORD - ZERO OTPS NEEDED)
+                      // ════════════════════════════════════════════════════════
+                      if (!_isSignUp) ...[
+                        // Mobile / Username Input
+                        Text(
+                          'Mobile Number or Username',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: isDark ? AppTheme.butter : AppTheme.forestGreen,
                           ),
-                        ],
-                      ),
+                        ),
+                        const SizedBox(height: 8),
 
-                      const SizedBox(height: 22),
-
-                      // Submit Button
-                      NeumorphicButton(
-                        height: 48,
-                        onPressed: _isLoading ? null : _sendOtp,
-                        child: _isLoading
-                            ? const CarLoadingIndicator(size: 26)
-                            : Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    _selectedTabIndex == 0
-                                        ? Icons.login_rounded
-                                        : Icons.storefront_rounded,
-                                    size: 18,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    _selectedTabIndex == 0
-                                        ? 'Login as Parking Seeker'
-                                        : 'Login as Parking Provider',
-                                    style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
-                                  ),
-                                ],
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.surface,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                              color: Theme.of(context).dividerTheme.color ??
+                                  (isDark ? AppTheme.borderDark : AppTheme.borderLight),
+                              width: 1.0,
+                            ),
+                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                          child: TextField(
+                            controller: _identifierController,
+                            keyboardType: TextInputType.text,
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              color: Theme.of(context).colorScheme.onSurface,
+                            ),
+                            decoration: InputDecoration(
+                              icon: Icon(
+                                Icons.person_pin_circle_rounded,
+                                size: 20,
+                                color: isDark ? AppTheme.accentGold : AppTheme.forestGreen,
                               ),
-                      ),
+                              hintText: 'e.g. 9822012345 or john_driver',
+                              hintStyle: TextStyle(
+                                color: Theme.of(context).colorScheme.outline,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              border: InputBorder.none,
+                              contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                          ),
+                        ),
 
-                      // ── Seeker Skip For Now Option (Requested by user) ─────
+                        const SizedBox(height: 16),
+
+                        // Password Input
+                        Text(
+                          'Password',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: isDark ? AppTheme.butter : AppTheme.forestGreen,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.surface,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                              color: Theme.of(context).dividerTheme.color ??
+                                  (isDark ? AppTheme.borderDark : AppTheme.borderLight),
+                              width: 1.0,
+                            ),
+                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                          child: TextField(
+                            controller: _passwordController,
+                            obscureText: _obscurePassword,
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: _obscurePassword ? 2.0 : 0,
+                              color: Theme.of(context).colorScheme.onSurface,
+                            ),
+                            decoration: InputDecoration(
+                              icon: Icon(
+                                Icons.lock_outline_rounded,
+                                size: 20,
+                                color: isDark ? AppTheme.accentGold : AppTheme.forestGreen,
+                              ),
+                              suffixIcon: IconButton(
+                                icon: Icon(
+                                  _obscurePassword ? Icons.visibility_off_rounded : Icons.visibility_rounded,
+                                  size: 20,
+                                  color: Theme.of(context).colorScheme.outline,
+                                ),
+                                onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                              ),
+                              hintText: 'Enter your password',
+                              hintStyle: TextStyle(
+                                color: Theme.of(context).colorScheme.outline,
+                                letterSpacing: 0,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              border: InputBorder.none,
+                              contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(height: 12),
+
+                        Row(
+                          children: [
+                            Icon(Icons.bolt_rounded, size: 14, color: isDark ? AppTheme.accentGold : AppTheme.forestGreen),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Instant sign in • Zero OTPs required',
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 11, fontWeight: FontWeight.w600),
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 20),
+
+                        // Sign In Submit Button
+                        NeumorphicButton(
+                          height: 48,
+                          onPressed: _isLoading ? null : _loginPassword,
+                          child: _isLoading
+                              ? const CarLoadingIndicator(size: 26)
+                              : Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      _selectedTabIndex == 0
+                                          ? Icons.login_rounded
+                                          : Icons.storefront_rounded,
+                                      size: 18,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      _selectedTabIndex == 0
+                                          ? 'Sign In as Parking Seeker'
+                                          : 'Sign In as Parking Provider',
+                                      style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
+                                    ),
+                                  ],
+                                ),
+                        ),
+
+                        const SizedBox(height: 12),
+
+                        // Option to sign in via OTP if password is forgotten
+                        Center(
+                          child: TextButton(
+                            onPressed: () => setState(() => _isSignUp = true),
+                            child: Text(
+                              'Forgot password or first time? Sign up with OTP',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: isDark ? AppTheme.accentGold : AppTheme.forestGreen,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ] else ...[
+                        // ════════════════════════════════════════════════════
+                        // MODE B: SIGN UP (MOBILE + MESSAGE CENTRAL SMS OTP)
+                        // ════════════════════════════════════════════════════
+                        Text(
+                          'Mobile Number',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: isDark ? AppTheme.butter : AppTheme.forestGreen,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.surface,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                              color: Theme.of(context).dividerTheme.color ??
+                                  (isDark ? AppTheme.borderDark : AppTheme.borderLight),
+                              width: 1.0,
+                            ),
+                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          child: Row(
+                            children: [
+                              // Country Code Selector Button
+                              InkWell(
+                                onTap: _chooseCountry,
+                                borderRadius: BorderRadius.circular(8),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(_selectedCountry.flag, style: const TextStyle(fontSize: 18)),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        _selectedCountry.dialCode,
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w800,
+                                          fontSize: 14,
+                                          color: isDark ? AppTheme.butter : AppTheme.forestGreen,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 2),
+                                      Icon(
+                                        Icons.keyboard_arrow_down_rounded,
+                                        size: 16,
+                                        color: Theme.of(context).colorScheme.outline,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+
+                              Container(
+                                height: 24,
+                                width: 1,
+                                color: Theme.of(context).dividerTheme.color ??
+                                    (isDark ? AppTheme.borderDark : AppTheme.borderLight),
+                                margin: const EdgeInsets.symmetric(horizontal: 8),
+                              ),
+
+                              // Phone Number Input
+                              Expanded(
+                                child: TextField(
+                                  controller: _phoneController,
+                                  keyboardType: TextInputType.phone,
+                                  inputFormatters: [
+                                    FilteringTextInputFormatter.digitsOnly,
+                                    LengthLimitingTextInputFormatter(14),
+                                  ],
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: 0.8,
+                                    color: Theme.of(context).colorScheme.onSurface,
+                                  ),
+                                  decoration: InputDecoration(
+                                    hintText: isEn ? l.mobileNumber : '98765 43210',
+                                    hintStyle: TextStyle(
+                                      color: Theme.of(context).colorScheme.outline,
+                                      letterSpacing: 0,
+                                      fontSize: 14,
+                                    ),
+                                    border: InputBorder.none,
+                                    enabledBorder: InputBorder.none,
+                                    focusedBorder: InputBorder.none,
+                                    filled: true,
+                                    fillColor: Colors.transparent,
+                                    contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        const SizedBox(height: 12),
+
+                        Row(
+                          children: [
+                            Icon(Icons.shield_outlined,
+                                size: 13, color: Theme.of(context).colorScheme.outline),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Instant 4-digit SMS code via MessageCentral',
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 11),
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 20),
+
+                        // Send OTP Button
+                        NeumorphicButton(
+                          height: 48,
+                          onPressed: _isLoading ? null : _sendOtp,
+                          child: _isLoading
+                              ? const CarLoadingIndicator(size: 26)
+                              : Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Icon(Icons.send_rounded, size: 18),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      _selectedTabIndex == 0
+                                          ? 'Verify Mobile & Create Profile'
+                                          : 'Verify Mobile & Onboard Facility',
+                                      style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
+                                    ),
+                                  ],
+                                ),
+                        ),
+
+                        const SizedBox(height: 12),
+
+                        Center(
+                          child: TextButton(
+                            onPressed: () => setState(() => _isSignUp = false),
+                            child: Text(
+                              'Already registered? Sign In with Password',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: isDark ? AppTheme.accentGold : AppTheme.forestGreen,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+
+                      // ── Seeker Skip For Now Option (Only on Seeker tab) ─────
                       if (_selectedTabIndex == 0) ...[
-                        const SizedBox(height: 14),
+                        const SizedBox(height: 8),
                         Center(
                           child: TextButton(
                             onPressed: () {

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../../../core/api_client.dart';
 import '../../../core/user_state_service.dart';
 import '../../../shared/theme/app_theme.dart';
 import '../../../shared/widgets/car_loading_indicator.dart';
@@ -20,22 +22,43 @@ class _ProviderOnboardingScreenState extends State<ProviderOnboardingScreen> {
   // Step 1: Category
   String _selectedCategory = 'INDIVIDUAL';
 
-  // Step 2: Identity / Business
-  final _businessNameController = TextEditingController(text: 'Prime Parking Bay');
-  final _contactPersonController = TextEditingController(text: 'Rajesh Sharma');
-  final _phoneController = TextEditingController(text: '+91 98220 12345');
-  final _emailController = TextEditingController(text: 'host@parksync.in');
-  String _selectedIdType = 'Driving License';
+  // Step 2: Identity / Business (No fake hardcoded mock defaults!)
+  final _businessNameController = TextEditingController();
+  final _contactPersonController = TextEditingController();
+  final _phoneController = TextEditingController();
+  final _emailController = TextEditingController();
   final _taxNumberController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
+  bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
+  String _selectedIdType = 'Driving License';
 
   // Step 3: Location
-  final _facilityNameController = TextEditingController(text: 'Central Commercial Bay A');
-  final _addressController = TextEditingController(text: 'Plot 42, Station Central Hub Road');
+  final _facilityNameController = TextEditingController();
+  final _addressController = TextEditingController();
   final _cityController = TextEditingController(text: 'Pune');
-  final _pincodeController = TextEditingController(text: '411001');
+  final _pincodeController = TextEditingController();
   double _latitude = 18.5204;
   double _longitude = 73.8567;
   bool _isLocatingGps = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final user = UserStateService.instance;
+    if (user.phoneNumber.isNotEmpty) {
+      _phoneController.text = user.phoneNumber;
+    }
+    if (user.userName.isNotEmpty &&
+        user.userName != 'Verified Driver' &&
+        user.userName != 'Guest Driver') {
+      _contactPersonController.text = user.userName;
+    }
+    if (user.userEmail.isNotEmpty) {
+      _emailController.text = user.userEmail;
+    }
+  }
 
   // Step 4: Capacity & Restrictions
   int _totalBays = 6;
@@ -96,6 +119,8 @@ class _ProviderOnboardingScreenState extends State<ProviderOnboardingScreen> {
     _phoneController.dispose();
     _emailController.dispose();
     _taxNumberController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
     _facilityNameController.dispose();
     _addressController.dispose();
     _cityController.dispose();
@@ -125,13 +150,39 @@ class _ProviderOnboardingScreenState extends State<ProviderOnboardingScreen> {
   void _submitListing() async {
     setState(() => _isLoading = true);
 
+    final pwd = _passwordController.text.trim();
+    final phone = _phoneController.text.trim();
+    final name = _contactPersonController.text.trim();
+    final email = _emailController.text.trim();
+
+    if (pwd.isNotEmpty) {
+      try {
+        final response = await ApiClient().dio.post('/auth/register-profile', data: {
+          'phone': phone,
+          'name': name,
+          'email': email.isNotEmpty ? email : null,
+          'password': pwd,
+          'role': 'PROVIDER',
+        });
+        if (response.data != null && response.data['token'] != null) {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('jwt_token', response.data['token'].toString());
+        }
+      } catch (e) {
+        debugPrint('[Provider] Register-profile sync: $e');
+      }
+      await UserStateService.instance.savePassword(phone, pwd);
+    }
+
     final facility = ProviderFacility(
       id: 'fac_${DateTime.now().millisecondsSinceEpoch}',
       category: _selectedCategory,
-      businessName: _businessNameController.text.trim(),
-      contactPerson: _contactPersonController.text.trim(),
-      contactPhone: _phoneController.text.trim(),
-      contactEmail: _emailController.text.trim(),
+      businessName: _businessNameController.text.trim().isNotEmpty
+          ? _businessNameController.text.trim()
+          : name,
+      contactPerson: name,
+      contactPhone: phone,
+      contactEmail: email.isNotEmpty ? email : 'host@parksync.in',
       facilityName: _facilityNameController.text.trim(),
       address: _addressController.text.trim(),
       city: _cityController.text.trim(),
@@ -151,7 +202,7 @@ class _ProviderOnboardingScreenState extends State<ProviderOnboardingScreen> {
       verificationStatus: VerificationStatus.underReview,
     );
 
-    // Save in UserStateService
+    // Save in UserStateService & SharedPreferences
     await UserStateService.instance.saveProviderFacility(facility);
     await UserStateService.instance.switchRole(UserRole.provider);
 
@@ -176,23 +227,100 @@ class _ProviderOnboardingScreenState extends State<ProviderOnboardingScreen> {
 
   void _nextStep() {
     if (_currentStep == 1) {
-      if (_contactPersonController.text.trim().isEmpty) {
+      if (_contactPersonController.text.trim().length < 2) {
         SweetPopup.show(
           context,
           title: 'Contact Name Required',
-          message: 'Please enter authorized host or owner name.',
+          message: 'Please enter authorized host or owner name (min 2 characters).',
           icon: Icons.person_outline_rounded,
           iconColor: AppTheme.error,
         );
         return;
       }
+      if (_phoneController.text.trim().length < 6) {
+        SweetPopup.show(
+          context,
+          title: 'Phone Number Required',
+          message: 'Please enter valid contact phone number for payout linking.',
+          icon: Icons.phone_disabled_rounded,
+          iconColor: AppTheme.error,
+        );
+        return;
+      }
+      final pwd = _passwordController.text.trim();
+      final confPwd = _confirmPasswordController.text.trim();
+      if (pwd.isNotEmpty) {
+        if (pwd.length < 6) {
+          SweetPopup.show(
+            context,
+            title: 'Password Too Short',
+            message: 'Password must be at least 6 characters.',
+            icon: Icons.lock_outline_rounded,
+            iconColor: AppTheme.error,
+          );
+          return;
+        }
+        if (pwd != confPwd) {
+          SweetPopup.show(
+            context,
+            title: 'Passwords Do Not Match',
+            message: 'Please re-type password identically.',
+            icon: Icons.lock_reset_rounded,
+            iconColor: AppTheme.error,
+          );
+          return;
+        }
+      }
     } else if (_currentStep == 2) {
-      if (_facilityNameController.text.trim().isEmpty || _addressController.text.trim().isEmpty) {
+      if (_facilityNameController.text.trim().length < 3 ||
+          _addressController.text.trim().length < 5) {
         SweetPopup.show(
           context,
           title: 'Facility Details Required',
           message: 'Please provide facility name and complete road address.',
           icon: Icons.location_on_outlined,
+          iconColor: AppTheme.error,
+        );
+        return;
+      }
+      if (_pincodeController.text.trim().length != 6) {
+        SweetPopup.show(
+          context,
+          title: 'Valid Pincode Required',
+          message: 'Please enter a 6-digit postal pincode.',
+          icon: Icons.pin_drop_rounded,
+          iconColor: AppTheme.error,
+        );
+        return;
+      }
+    } else if (_currentStep == 3) {
+      if (_totalBays <= 0) {
+        SweetPopup.show(
+          context,
+          title: 'Bays Required',
+          message: 'Facility must have at least 1 parking bay.',
+          icon: Icons.local_parking_rounded,
+          iconColor: AppTheme.error,
+        );
+        return;
+      }
+      if (_allowedVehicles.isEmpty) {
+        SweetPopup.show(
+          context,
+          title: 'Allowed Vehicles Required',
+          message: 'Please select at least one vehicle category.',
+          icon: Icons.directions_car_rounded,
+          iconColor: AppTheme.error,
+        );
+        return;
+      }
+    } else if (_currentStep == 4) {
+      if (_hourlyRate <= 0) {
+        SweetPopup.show(
+          context,
+          title: 'Hourly Rate Required',
+          message: 'Please set an hourly rate greater than ₹0.',
+          icon: Icons.currency_rupee_rounded,
           iconColor: AppTheme.error,
         );
         return;
@@ -506,7 +634,7 @@ class _ProviderOnboardingScreenState extends State<ProviderOnboardingScreen> {
           child: TextField(
             controller: _contactPersonController,
             decoration: const InputDecoration(
-              hintText: 'e.g. Rajesh Sharma',
+              hintText: 'e.g. Ramesh Kulkarni (Owner / Manager)',
               border: InputBorder.none,
               filled: true,
               fillColor: Colors.transparent,
@@ -526,7 +654,7 @@ class _ProviderOnboardingScreenState extends State<ProviderOnboardingScreen> {
             controller: _phoneController,
             keyboardType: TextInputType.phone,
             decoration: const InputDecoration(
-              hintText: '+91 98220 12345',
+              hintText: '+91 98765 43210',
               border: InputBorder.none,
               filled: true,
               fillColor: Colors.transparent,
@@ -553,6 +681,63 @@ class _ProviderOnboardingScreenState extends State<ProviderOnboardingScreen> {
               onChanged: (val) {
                 if (val != null) setState(() => _selectedIdType = val);
               },
+            ),
+          ),
+        ),
+
+        const SizedBox(height: 16),
+
+        // Create Password for Host Dashboard access
+        Text('Create Provider Password *',
+            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: isDark ? AppTheme.butter : AppTheme.forestGreen)),
+        const SizedBox(height: 8),
+        NeumorphicCard(
+          radius: 14,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
+          child: TextField(
+            controller: _passwordController,
+            obscureText: _obscurePassword,
+            decoration: InputDecoration(
+              hintText: 'Minimum 6 characters for direct sign-in',
+              suffixIcon: IconButton(
+                icon: Icon(
+                  _obscurePassword ? Icons.visibility_off_rounded : Icons.visibility_rounded,
+                  size: 20,
+                  color: Theme.of(context).colorScheme.outline,
+                ),
+                onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+              ),
+              border: InputBorder.none,
+              filled: true,
+              fillColor: Colors.transparent,
+            ),
+          ),
+        ),
+
+        const SizedBox(height: 16),
+
+        Text('Confirm Provider Password *',
+            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: isDark ? AppTheme.butter : AppTheme.forestGreen)),
+        const SizedBox(height: 8),
+        NeumorphicCard(
+          radius: 14,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
+          child: TextField(
+            controller: _confirmPasswordController,
+            obscureText: _obscureConfirmPassword,
+            decoration: InputDecoration(
+              hintText: 'Re-type password identically',
+              suffixIcon: IconButton(
+                icon: Icon(
+                  _obscureConfirmPassword ? Icons.visibility_off_rounded : Icons.visibility_rounded,
+                  size: 20,
+                  color: Theme.of(context).colorScheme.outline,
+                ),
+                onPressed: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
+              ),
+              border: InputBorder.none,
+              filled: true,
+              fillColor: Colors.transparent,
             ),
           ),
         ),

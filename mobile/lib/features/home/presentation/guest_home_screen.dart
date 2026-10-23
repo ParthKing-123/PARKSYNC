@@ -781,19 +781,19 @@ class _GuestHomeScreenState extends State<GuestHomeScreen> {
           const SizedBox(height: 14),
           Row(
             children: [
-              Expanded(
+              SizedBox(
+                width: double.infinity,
                 child: NeumorphicButton(
                   height: 42,
-                  onPressed: () => context.push('/role-selection'),
-                  child: const Text('Read Guide', style: TextStyle(fontSize: 13)),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: NeumorphicButton(
-                  height: 42,
-                  onPressed: () => context.push('/provider-onboarding'),
-                  child: const Text('List Space', style: TextStyle(fontSize: 13)),
+                  onPressed: () => context.push('/user-guide'),
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.menu_book_rounded, size: 16),
+                      SizedBox(width: 8),
+                      Text('Explore Driver Guide', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+                    ],
+                  ),
                 ),
               ),
             ],
@@ -1130,7 +1130,6 @@ class _GuestHomeScreenState extends State<GuestHomeScreen> {
         final userName = UserStateService.instance.userName;
         final phone = UserStateService.instance.phoneNumber;
         final vehiclesCount = UserStateService.instance.vehicles.length;
-        final isHost = UserStateService.instance.isProviderRegistered;
 
         return SingleChildScrollView(
           padding: const EdgeInsets.all(20.0),
@@ -1298,38 +1297,6 @@ class _GuestHomeScreenState extends State<GuestHomeScreen> {
                 onTap: () => context.push('/privacy-policy', extra: 0),
               ),
 
-              const SizedBox(height: 24),
-
-              Text(
-                'Partner with ParkSync',
-                style: Theme.of(context).textTheme.displaySmall?.copyWith(fontSize: 18),
-              ),
-              const SizedBox(height: 12),
-
-              // Host Onboarding / Switch Tile
-              ListTile(
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                tileColor: Theme.of(context).colorScheme.surface,
-                leading: const Icon(Icons.storefront_rounded, color: AppTheme.success),
-                title: Text(
-                  isHost ? 'Switch to Host Dashboard' : 'Become a Parking Host',
-                  style: const TextStyle(fontWeight: FontWeight.w600),
-                ),
-                subtitle: Text(
-                  isHost ? 'Manage listings, bookings & view earnings' : 'List driveways, lots, or commercial bays',
-                ),
-                trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14),
-                onTap: () async {
-                  if (isHost) {
-                    await UserStateService.instance.switchRole(UserRole.provider);
-                    if (context.mounted) {
-                      context.go('/provider-home');
-                    }
-                  } else {
-                    context.push('/provider-onboarding');
-                  }
-                },
-              ),
 
               if (isLoggedIn) ...[
                 const SizedBox(height: 10),

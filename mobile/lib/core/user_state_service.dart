@@ -1,5 +1,8 @@
+import 'dart:convert';
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'api_client.dart';
 
 /// Supported user roles in ParkSync
 enum UserRole {
@@ -291,32 +294,18 @@ class UserStateService extends ChangeNotifier {
       ));
       _activeVehicle = _vehicles.first;
 
-      // Default demo provider listing for inspection
-      _providerFacility = const ProviderFacility(
-        id: 'fac_metro_01',
-        category: 'OFFICE',
-        businessName: 'Metro Grand Corporate Park',
-        contactPerson: 'Rajesh Sharma',
-        contactPhone: '+91 98220 12345',
-        contactEmail: 'parking@metrogrand.com',
-        facilityName: 'Metro Grand Parking Bay A',
-        address: 'Opposite Central Railway Station Hub',
-        city: 'Pune',
-        pincode: '411001',
-        latitude: 18.5204,
-        longitude: 73.8567,
-        totalBays: 12,
-        availableBays: 8,
-        slotType: 'Basement Covered',
-        heightClearance: '2.4 meters',
-        allowedVehicles: ['Hatchback', 'Sedan', 'SUV', 'EV'],
-        amenities: ['CCTV 24/7', 'Security Guard', 'EV Fast Charging', 'Fire Safety'],
-        hourlyRate: 50.0,
-        operatingHours: '24 Hours',
-        operatingDays: 'All Days',
-        isInstantBooking: true,
-        verificationStatus: VerificationStatus.approved,
-      );
+      // Restore provider facility from storage if explicitly registered by user
+      final facilityJson = prefs.getString('provider_facility_data');
+      if (facilityJson != null && facilityJson.isNotEmpty) {
+        try {
+          final decoded = jsonDecode(facilityJson) as Map<String, dynamic>;
+          _providerFacility = ProviderFacility.fromJson(decoded);
+        } catch (_) {
+          _providerFacility = null;
+        }
+      } else {
+        _providerFacility = null;
+      }
 
       _initialized = true;
       notifyListeners();
@@ -387,7 +376,98 @@ class UserStateService extends ChangeNotifier {
   /// Register or update Provider facility
   Future<void> saveProviderFacility(ProviderFacility facility) async {
     _providerFacility = facility;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('provider_facility_data', jsonEncode(facility.toJson()));
     notifyListeners();
+  }
+
+  /// Log in directly using phone/username/email + password (0 OTPs needed)
+  Future<Map<String, dynamic>> loginWithPassword({
+    required String identifier,
+    required String password,
+    required UserRole role,
+  }) async {
+    final cleanIdentifier = identifier.trim();
+    final cleanPwd = password.trim();
+    final roleStr = role == UserRole.provider ? 'PROVIDER' : 'SEEKER';
+
+    // 1. Attempt backend authentication
+    try {
+      final response = await ApiClient().dio.post('/auth/login-password', data: {
+        'identifier': cleanIdentifier,
+        'password': cleanPwd,
+        'role': roleStr,
+      });
+
+      if (response.data != null && response.data['success'] == true) {
+        final userData = response.data['user'];
+        final token = response.data['token']?.toString();
+
+        final phone = userData?['phone']?.toString() ?? cleanIdentifier;
+        final name = userData?['name']?.toString() ?? '';
+        final email = userData?['email']?.toString() ?? '';
+
+        await login(
+          phone: phone,
+          role: role,
+          name: name.isNotEmpty ? name : null,
+          email: email.isNotEmpty ? email : null,
+        );
+
+        final prefs = await SharedPreferences.getInstance();
+        if (token != null) {
+          await prefs.setString('jwt_token', token);
+        }
+        await prefs.setString('user_pwd_${_sanitizePhone(phone)}', cleanPwd);
+        await prefs.setBool('user_has_password', true);
+
+        return {'success': true, 'user': userData};
+      }
+    } catch (e) {
+      if (e is DioException && e.response != null) {
+        final data = e.response?.data;
+        final errorMsg = data is Map && data['error'] != null
+            ? data['error'].toString()
+            : 'Authentication failed. Please check credentials.';
+        throw Exception(errorMsg);
+      }
+      debugPrint('[Auth] Backend offline, checking local password fallback: $e');
+    }
+
+    // 2. Offline fallback: check locally saved password for this user
+    final prefs = await SharedPreferences.getInstance();
+    final sanitized = _sanitizePhone(cleanIdentifier);
+    final savedPwd = prefs.getString('user_pwd_$sanitized') ?? prefs.getString('user_pwd_generic');
+
+    if (savedPwd != null && savedPwd == cleanPwd) {
+      final savedPhone = prefs.getString('auth_phone') ?? cleanIdentifier;
+      final savedName = prefs.getString('auth_name');
+      final savedEmail = prefs.getString('auth_email');
+
+      await login(
+        phone: savedPhone,
+        role: role,
+        name: savedName,
+        email: savedEmail,
+      );
+      return {'success': true, 'offline': true};
+    }
+
+    // If no password matched
+    throw Exception('Incorrect mobile/username or password. If this is your first time, please Sign Up.');
+  }
+
+  /// Store or update password for user locally
+  Future<void> savePassword(String phone, String password) async {
+    final prefs = await SharedPreferences.getInstance();
+    final sanitized = _sanitizePhone(phone);
+    await prefs.setString('user_pwd_$sanitized', password.trim());
+    await prefs.setString('user_pwd_generic', password.trim());
+    await prefs.setBool('user_has_password', true);
+  }
+
+  static String _sanitizePhone(String phone) {
+    return phone.replaceAll(RegExp(r'[^0-9]'), '');
   }
 
   /// Log out
@@ -397,6 +477,7 @@ class UserStateService extends ChangeNotifier {
     _userName = '';
     _userEmail = '';
     _activeRole = UserRole.seeker;
+    _providerFacility = null;
 
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('auth_logged_in', false);
@@ -405,6 +486,7 @@ class UserStateService extends ChangeNotifier {
     await prefs.remove('auth_name');
     await prefs.remove('auth_email');
     await prefs.remove('auth_active_role');
+    await prefs.remove('provider_facility_data');
 
     notifyListeners();
   }

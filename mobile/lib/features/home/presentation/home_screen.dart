@@ -850,52 +850,6 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
 
-          const SizedBox(height: 24),
-          Text('Partner with ParkSync',
-              style: Theme.of(context).textTheme.displaySmall?.copyWith(fontSize: 18)),
-          const SizedBox(height: 12),
-
-          // Switch / Register Host Tile
-          NeumorphicCard(
-            onTap: () async {
-              if (UserStateService.instance.isProviderRegistered) {
-                await UserStateService.instance.switchRole(UserRole.provider);
-                if (context.mounted) {
-                  context.go('/provider-home');
-                }
-              } else {
-                context.push('/provider-onboarding');
-              }
-            },
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            radius: 16,
-            child: Row(
-              children: [
-                const Icon(Icons.storefront_rounded, color: AppTheme.success, size: 22),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        UserStateService.instance.isProviderRegistered
-                            ? 'Switch to Host Dashboard'
-                            : 'Become a Parking Host',
-                        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
-                      ),
-                      Text(
-                        UserStateService.instance.isProviderRegistered
-                            ? 'Manage your bays, rates & earnings'
-                            : 'Monetize vacant driveway or commercial lot',
-                        style: const TextStyle(color: Colors.grey, fontSize: 11),
-                      ),
-                    ],
-                  ),
-                ),
-                const Icon(Icons.arrow_forward_ios_rounded, size: 14),
-              ],
-            ),
-          ),
 
           const SizedBox(height: 12),
 

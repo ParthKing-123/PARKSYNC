@@ -77,7 +77,8 @@ class _ProviderDashboardView extends StatelessWidget {
       listenable: UserStateService.instance,
       builder: (context, _) {
         final facility = UserStateService.instance.providerFacility;
-        final status = facility?.verificationStatus ?? VerificationStatus.underReview;
+        final hasFacility = facility != null;
+        final status = facility?.verificationStatus ?? VerificationStatus.draft;
         final isApproved = status == VerificationStatus.approved;
 
         return Scaffold(
@@ -143,13 +144,19 @@ class _ProviderDashboardView extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: (isApproved ? AppTheme.success : AppTheme.amber)
+                          color: (!hasFacility
+                                  ? AppTheme.accentGold
+                                  : (isApproved ? AppTheme.success : AppTheme.amber))
                               .withValues(alpha: isDark ? 0.25 : 0.15),
                           shape: BoxShape.circle,
                         ),
                         child: Icon(
-                          isApproved ? Icons.verified_rounded : Icons.pending_actions_rounded,
-                          color: isApproved ? AppTheme.success : AppTheme.amber,
+                          !hasFacility
+                              ? Icons.add_location_alt_rounded
+                              : (isApproved ? Icons.verified_rounded : Icons.pending_actions_rounded),
+                          color: !hasFacility
+                              ? (isDark ? AppTheme.accentGold : AppTheme.forestGreen)
+                              : (isApproved ? AppTheme.success : AppTheme.amber),
                           size: 24,
                         ),
                       ),
@@ -161,21 +168,27 @@ class _ProviderDashboardView extends StatelessWidget {
                             Row(
                               children: [
                                 Text(
-                                  isApproved ? 'Listing Active & Live' : 'Verification Under Review',
+                                  !hasFacility
+                                      ? 'Facility Setup Pending'
+                                      : (isApproved ? 'Listing Active & Live' : 'Verification Under Review'),
                                   style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
                                 ),
                                 const Spacer(),
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                   decoration: BoxDecoration(
-                                    color: (isApproved ? AppTheme.success : AppTheme.amber)
+                                    color: (!hasFacility
+                                            ? AppTheme.accentGold
+                                            : (isApproved ? AppTheme.success : AppTheme.amber))
                                         .withValues(alpha: 0.18),
                                     borderRadius: BorderRadius.circular(6),
                                   ),
                                   child: Text(
-                                    status.code,
+                                    !hasFacility ? 'SETUP REQUIRED' : status.code,
                                     style: TextStyle(
-                                      color: isApproved ? AppTheme.success : AppTheme.amber,
+                                      color: !hasFacility
+                                          ? (isDark ? AppTheme.accentGold : AppTheme.forestGreen)
+                                          : (isApproved ? AppTheme.success : AppTheme.amber),
                                       fontSize: 10,
                                       fontWeight: FontWeight.w900,
                                     ),
@@ -185,9 +198,11 @@ class _ProviderDashboardView extends StatelessWidget {
                             ),
                             const SizedBox(height: 6),
                             Text(
-                              isApproved
-                                  ? 'Your facility is verified. Drivers can discover and reserve bays in real time.'
-                                  : 'ParkSync Trust & Safety team is validating your facility coordinates and authorization. Unapproved listings cannot receive public bookings yet.',
+                              !hasFacility
+                                  ? 'You have not listed any parking space yet. Complete the onboarding steps to start earning.'
+                                  : (isApproved
+                                      ? 'Your facility is verified. Drivers can discover and reserve bays in real time.'
+                                      : 'ParkSync Trust & Safety team is validating your facility coordinates and authorization. Unapproved listings cannot receive public bookings yet.'),
                               style: TextStyle(
                                 color: Theme.of(context).colorScheme.outline,
                                 fontSize: 12,
@@ -284,7 +299,7 @@ class _ProviderDashboardView extends StatelessWidget {
                             Text('Total Bays', style: TextStyle(color: Theme.of(context).colorScheme.outline, fontSize: 11)),
                             const SizedBox(height: 4),
                             Text(
-                              '${facility?.totalBays ?? 4}',
+                              '${facility?.totalBays ?? 0}',
                               style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 20),
                             ),
                           ],
@@ -302,7 +317,7 @@ class _ProviderDashboardView extends StatelessWidget {
                             Text('Available Bays', style: TextStyle(color: Theme.of(context).colorScheme.outline, fontSize: 11)),
                             const SizedBox(height: 4),
                             Text(
-                              '${facility?.availableBays ?? 3}',
+                              '${facility?.availableBays ?? 0}',
                               style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 20, color: AppTheme.success),
                             ),
                           ],
@@ -320,7 +335,7 @@ class _ProviderDashboardView extends StatelessWidget {
                             Text('Hourly Rate', style: TextStyle(color: Theme.of(context).colorScheme.outline, fontSize: 11)),
                             const SizedBox(height: 4),
                             Text(
-                              '₹${facility?.hourlyRate.toInt() ?? 40}',
+                              '₹${facility?.hourlyRate.toInt() ?? 0}',
                               style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 20),
                             ),
                           ],
@@ -339,56 +354,91 @@ class _ProviderDashboardView extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
 
-                NeumorphicCard(
-                  radius: 18,
-                  padding: const EdgeInsets.all(18.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Container(
-                            width: 52,
-                            height: 52,
-                            decoration: BoxDecoration(
-                              color: AppTheme.forestGreen.withValues(alpha: 0.12),
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                            child: const Icon(Icons.local_parking_rounded, color: AppTheme.forestGreen, size: 28),
+                if (facility == null)
+                  NeumorphicCard(
+                    radius: 18,
+                    padding: const EdgeInsets.all(22.0),
+                    child: Column(
+                      children: [
+                        const Icon(Icons.add_business_rounded, color: AppTheme.amber, size: 38),
+                        const SizedBox(height: 10),
+                        const Text(
+                          'No Active Facility Registered',
+                          style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          'You have not added your parking bays yet. Complete the onboarding to start monetizing space.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: Theme.of(context).colorScheme.outline, fontSize: 12),
+                        ),
+                        const SizedBox(height: 16),
+                        NeumorphicButton(
+                          height: 42,
+                          onPressed: () => context.push('/provider-onboarding'),
+                          child: const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.add_rounded, size: 18),
+                              SizedBox(width: 6),
+                              Text('Add Parking Facility', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13)),
+                            ],
                           ),
-                          const SizedBox(width: 14),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  facility?.facilityName ?? 'ParkSync Bay Alpha',
-                                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w800),
-                                ),
-                                const SizedBox(height: 3),
-                                Text(
-                                  facility?.address ?? 'Central Avenue Hub, Pune',
-                                  style: TextStyle(color: Theme.of(context).colorScheme.outline, fontSize: 12),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ],
+                        ),
+                      ],
+                    ),
+                  )
+                else
+                  NeumorphicCard(
+                    radius: 18,
+                    padding: const EdgeInsets.all(18.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              width: 52,
+                              height: 52,
+                              decoration: BoxDecoration(
+                                color: AppTheme.forestGreen.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              child: const Icon(Icons.local_parking_rounded, color: AppTheme.forestGreen, size: 28),
                             ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 14),
-                      Wrap(
-                        spacing: 8,
-                        children: [
-                          _buildChip(context, '${facility?.slotType ?? "Covered"} Slot'),
-                          _buildChip(context, facility?.operatingHours ?? '24 Hours'),
-                          _buildChip(context, '₹${facility?.hourlyRate.toInt() ?? 40}/hr'),
-                        ],
-                      ),
-                    ],
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    facility.facilityName,
+                                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w800),
+                                  ),
+                                  const SizedBox(height: 3),
+                                  Text(
+                                    facility.address,
+                                    style: TextStyle(color: Theme.of(context).colorScheme.outline, fontSize: 12),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 14),
+                        Wrap(
+                          spacing: 8,
+                          children: [
+                            _buildChip(context, '${facility.slotType} Slot'),
+                            _buildChip(context, facility.operatingHours),
+                            _buildChip(context, '₹${facility.hourlyRate.toInt()}/hr'),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
-                ),
 
                 const SizedBox(height: 24),
 

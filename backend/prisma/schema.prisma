@@ -69,6 +69,8 @@ model User {
   phone             String    @unique
   email             String?
   name              String?
+  passwordHash      String?
+  salt              String?
   profileImageUrl   String?
   accountStatus     String    @default("ACTIVE")
   createdAt         DateTime  @default(now())
