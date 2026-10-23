@@ -22,6 +22,10 @@ export const sendOtp = async (req: Request, res: Response): Promise<void> => {
     }
 
     const result = await messageCentralService.sendOtp(phone);
+    if (!result.success) {
+      res.status(502).json({ error: result.message });
+      return;
+    }
     res.json(result);
   } catch (error: any) {
     console.error('Error in sendOtp:', error);
@@ -207,7 +211,7 @@ export const loginWithPassword = async (req: Request, res: Response): Promise<vo
     });
   } catch (error: any) {
     console.error('Error in loginWithPassword:', error);
-    res.status(500).json({ error: 'Database connection failed. Please ensure PostgreSQL is running.' });
+    res.status(500).json({ error: error.message || 'Database connection error. Please try again.' });
   }
 };
 

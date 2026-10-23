@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
+import 'package:dio/dio.dart';
 import '../../../../core/api_client.dart';
 import '../../../../core/user_state_service.dart';
 import '../../../../shared/theme/app_theme.dart';
@@ -145,10 +146,10 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
 
     setState(() => _isLoading = true);
 
-    // Standard E.164 phone format
-    final fullNumber = '${_selectedCountry.dialCode}$rawNumber';
+    // Standard E.164 phone format (sanitized of all spaces and non-digits)
+    final cleanDigits = rawNumber.replaceAll(RegExp(r'\D'), '');
+    final fullNumber = '${_selectedCountry.dialCode}$cleanDigits';
     final role = _selectedTabIndex == 0 ? 'seeker' : 'provider';
-    String? verificationId;
 
     try {
       final response = await ApiClient().dio.post('/auth/send-otp', data: {
@@ -156,34 +157,62 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
         'role': role,
       });
 
-      if (response.data != null && response.data['verificationId'] != null) {
-        verificationId = response.data['verificationId'].toString();
-      }
-
-      final msg = response.data?['message']?.toString() ?? 'OTP sent to $fullNumber';
-      if (mounted) {
-        SweetPopup.show(
-          context,
-          title: 'Code Sent!',
-          message: msg,
-          icon: Icons.sms_rounded,
-          iconColor: AppTheme.success,
-        );
+      if (response.data != null && response.data['success'] == true) {
+        final verificationId = response.data['verificationId']?.toString();
+        final msg = response.data['message']?.toString() ?? 'OTP sent to $fullNumber';
+        if (mounted) {
+          setState(() => _isLoading = false);
+          SweetPopup.show(
+            context,
+            title: 'Code Sent!',
+            message: msg,
+            icon: Icons.sms_rounded,
+            iconColor: AppTheme.success,
+          );
+          context.push(
+            '/verify-otp',
+            extra: {
+              'phone': fullNumber,
+              'role': role,
+              'verificationId': verificationId,
+            },
+          );
+        }
+        return;
+      } else {
+        final errorMsg = response.data?['error']?.toString() ??
+            response.data?['message']?.toString() ??
+            'Failed to dispatch SMS code.';
+        if (mounted) {
+          setState(() => _isLoading = false);
+          SweetPopup.show(
+            context,
+            title: 'SMS Dispatch Failed',
+            message: errorMsg,
+            icon: Icons.sms_failed_rounded,
+            iconColor: AppTheme.error,
+          );
+        }
+        return;
       }
     } catch (e) {
-      debugPrint('[Auth] Backend unreachable, using offline dev mode: $e');
-    }
-
-    if (mounted) {
-      setState(() => _isLoading = false);
-      context.push(
-        '/verify-otp',
-        extra: {
-          'phone': fullNumber,
-          'role': role,
-          'verificationId': verificationId,
-        },
-      );
+      String errorMsg = 'Failed to dispatch SMS code. Please try again.';
+      if (e is DioException && e.response?.data != null) {
+        final d = e.response!.data;
+        if (d is Map && (d['error'] != null || d['message'] != null)) {
+          errorMsg = (d['error'] ?? d['message']).toString();
+        }
+      }
+      if (mounted) {
+        setState(() => _isLoading = false);
+        SweetPopup.show(
+          context,
+          title: 'SMS Dispatch Failed',
+          message: errorMsg,
+          icon: Icons.sms_failed_rounded,
+          iconColor: AppTheme.error,
+        );
+      }
     }
   }
 

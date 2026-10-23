@@ -165,19 +165,17 @@ class MessageCentralService {
     }
 
     try {
+      // Official VerifyNow v3 Query Params: countryCode, flowType, mobileNumber, otpLength
+      // Custom senderId is NOT accepted on VerifyNow (carrier defaults like UTOMOB are handled automatically)
       const queryParams = new URLSearchParams({
         countryCode,
-        customerId: customerId || '',
         flowType: 'SMS',
         mobileNumber,
+        otpLength: '4',
       });
 
-      if (senderId) {
-        queryParams.append('senderId', senderId);
-      }
-
       const sendUrl = `${this.baseUrl}/verification/v3/send?${queryParams.toString()}`;
-      console.log(`[MessageCentral] Sending OTP to +${countryCode} ${mobileNumber}...`);
+      console.log(`[MessageCentral] Sending 4-digit OTP to +${countryCode} ${mobileNumber}...`);
 
       const response = await fetch(sendUrl, {
         method: 'POST',
@@ -199,25 +197,23 @@ class MessageCentralService {
         return {
           success: true,
           verificationId,
-          message: 'OTP sent successfully to your mobile number via MessageCentral SMS.',
+          message: '4-digit verification code sent to your mobile number via MessageCentral SMS.',
         };
       } else {
-        const errorMsg = resData?.message || resData?.data?.errorMessage || 'Failed to dispatch SMS';
-        console.warn('[MessageCentral] Dispatch notice:', errorMsg);
+        const errorMsg = resData?.data?.errorMessage || resData?.message || 'Carrier dispatch failure';
+        console.warn('[MessageCentral] Dispatch failure:', errorMsg);
         return {
-          success: true,
-          verificationId: `dev_mock_${Date.now()}`,
-          isMock: true,
-          message: `MessageCentral SMS notice: ${errorMsg}. (Fallback code 123456 enabled for testing).`,
+          success: false,
+          verificationId: '',
+          message: `MessageCentral SMS dispatch failed: ${errorMsg}. Please check your credit balance.`,
         };
       }
     } catch (err: any) {
       console.error('[MessageCentral] Network error in sendOtp:', err);
       return {
-        success: true,
-        verificationId: `dev_mock_${Date.now()}`,
-        isMock: true,
-        message: 'Network error calling MessageCentral. Fallback code 123456 enabled.',
+        success: false,
+        verificationId: '',
+        message: 'Network error calling MessageCentral CPaaS gateway.',
       };
     }
   }
@@ -251,19 +247,16 @@ class MessageCentralService {
     }
 
     try {
-      const queryParams = new URLSearchParams({
-        countryCode,
-        mobileNumber,
-        customerId: customerId || '',
-        code,
-      });
-
+      const queryParams = new URLSearchParams({ code });
       if (verificationId) {
         queryParams.append('verificationId', verificationId);
+      } else {
+        queryParams.append('countryCode', countryCode);
+        queryParams.append('mobileNumber', mobileNumber);
       }
 
       const validateUrl = `${this.baseUrl}/verification/v3/validateOtp?${queryParams.toString()}`;
-      console.log(`[MessageCentral] Validating OTP for +${countryCode} ${mobileNumber}...`);
+      console.log(`[MessageCentral] Validating OTP with params: ${queryParams.toString()}...`);
 
       const response = await fetch(validateUrl, {
         method: 'GET',
