@@ -781,8 +781,7 @@ class _GuestHomeScreenState extends State<GuestHomeScreen> {
           const SizedBox(height: 14),
           Row(
             children: [
-              SizedBox(
-                width: double.infinity,
+              Expanded(
                 child: NeumorphicButton(
                   height: 42,
                   onPressed: () => context.push('/user-guide'),
