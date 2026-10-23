@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:parksync/l10n/app_localizations.dart';
+import '../../../core/api_client.dart';
 import '../../../shared/theme/app_theme.dart';
 import '../../../core/locale_provider.dart';
 import '../../../core/theme_provider.dart';
@@ -25,71 +26,61 @@ class _GuestHomeScreenState extends State<GuestHomeScreen> {
   int _navIndex = 0;
   final TextEditingController _searchCtrl = TextEditingController();
   String _selectedFilter = 'All';
-  final Set<String> _savedSpotIds = {'p1'}; // Default one spot saved for demo
+  final Set<String> _savedSpotIds = {};
 
-  // Master listing data (Pan-India)
-  final List<Map<String, dynamic>> _allListings = [
-    {
-      'id': 'p1',
-      'name': 'Metro Grand Parking Bay',
-      'area': 'Station Central Hub',
-      'distance': '0.3',
-      'rate': 50,
-      'covered': true,
-      'cctv': true,
-      'verified': true,
-      'spots': 4,
-      'color': AppTheme.forestGreen,
-    },
-    {
-      'id': 'p2',
-      'name': 'Central Commercial Plaza',
-      'area': 'Business District',
-      'distance': '1.2',
-      'rate': 40,
-      'covered': true,
-      'cctv': true,
-      'verified': true,
-      'spots': 12,
-      'color': AppTheme.forestEmerald,
-    },
-    {
-      'id': 'p3',
-      'name': 'Tech Hub Multi-Level Lot',
-      'area': 'Cyber Park Avenue',
-      'distance': '2.4',
-      'rate': 30,
-      'covered': false,
-      'cctv': true,
-      'verified': true,
-      'spots': 7,
-      'color': const Color(0xFF10B981),
-    },
-    {
-      'id': 'p4',
-      'name': 'Station Road Secure Bay',
-      'area': 'Terminal North Gate',
-      'distance': '3.1',
-      'rate': 25,
-      'covered': true,
-      'cctv': false,
-      'verified': false,
-      'spots': 20,
-      'color': const Color(0xFFFFB800),
-    },
-    {
-      'id': 'p5',
-      'name': 'National Mall Basement Lot',
-      'area': 'City Center Mall',
-      'distance': '1.8',
-      'rate': 35,
-      'covered': true,
-      'cctv': true,
-      'verified': true,
-      'spots': 15,
-      'color': AppTheme.forestGreen,
-    },
-  ];
+  List<Map<String, dynamic>> _allListings = [];
+  bool _isLoadingListings = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchLiveListings();
+  }
+
+  Future<void> _fetchLiveListings() async {
+    setState(() => _isLoadingListings = true);
+    try {
+      final response = await ApiClient().dio.get('/parking');
+      if (response.data is List) {
+        final list = (response.data as List).map((item) {
+          final map = Map<String, dynamic>.from(item as Map);
+          final hostName = map['provider']?['displayName'] ??
+              map['provider']?['user']?['name'] ??
+              'Authorized Host';
+          final totalBays = map['totalBays'] ?? 1;
+          final availBays = map['availableBays'] ?? totalBays;
+          return {
+            'id': map['id']?.toString() ?? '',
+            'name': map['title']?.toString() ?? 'ParkSync Space',
+            'area': map['area']?.toString() ?? map['city']?.toString() ?? 'Central Hub',
+            'city': map['city']?.toString() ?? '',
+            'distance': '0.5',
+            'rate': (map['pricePerHour'] as num?)?.round() ?? 40,
+            'covered': map['covered'] == true,
+            'cctv': map['cctv'] == true,
+            'verified': true,
+            'spots': availBays,
+            'total': totalBays,
+            'hostName': hostName,
+            'color': AppTheme.forestGreen,
+          };
+        }).toList();
+
+        if (mounted) {
+          setState(() {
+            _allListings = list;
+            _isLoadingListings = false;
+          });
+        }
+        return;
+      }
+    } catch (e) {
+      debugPrint('[GuestHomeScreen] Fetch spots error: $e');
+    }
+    if (mounted) {
+      setState(() => _isLoadingListings = false);
+    }
+  }
 
   @override
   void dispose() {
@@ -521,8 +512,15 @@ class _GuestHomeScreenState extends State<GuestHomeScreen> {
           ),
           const SizedBox(height: 12),
 
-          // Listings or Empty State
-          if (spots.isEmpty)
+          // Listings, Loading, or Empty State
+          if (_isLoadingListings)
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.symmetric(vertical: 40),
+                child: CircularProgressIndicator(strokeWidth: 2.5, color: AppTheme.forestGreen),
+              ),
+            )
+          else if (spots.isEmpty)
             Container(
               padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
               alignment: Alignment.center,

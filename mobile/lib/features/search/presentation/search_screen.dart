@@ -5,6 +5,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:dio/dio.dart';
 import 'package:parksync/l10n/app_localizations.dart';
+import '../../../core/api_client.dart';
 import '../../../shared/theme/app_theme.dart';
 import '../../../shared/widgets/neumorphic_container.dart';
 import '../../../shared/widgets/sweet_popup.dart';
@@ -77,6 +78,40 @@ class _SearchScreenState extends State<SearchScreen> {
       _searchOpenStreetMap(widget.destination);
     } else {
       _detectCurrentLocation(silent: true);
+    }
+    _fetchLiveBackendSpots();
+  }
+
+  Future<void> _fetchLiveBackendSpots() async {
+    try {
+      final res = await ApiClient().dio.get('/parking');
+      if (res.data is List && (res.data as List).isNotEmpty) {
+        final liveSpots = (res.data as List).map((item) {
+          final map = Map<String, dynamic>.from(item as Map);
+          final lat = (map['latitude'] as num?)?.toDouble() ?? _mapCenter.latitude;
+          final lng = (map['longitude'] as num?)?.toDouble() ?? _mapCenter.longitude;
+          return SearchParkingSpot(
+            id: map['id']?.toString() ?? 'spot_${DateTime.now().millisecondsSinceEpoch}',
+            name: map['title']?.toString() ?? 'ParkSync Bay',
+            area: map['area']?.toString() ?? map['city']?.toString() ?? 'Central',
+            distanceKm: 0.6,
+            ratePerHour: (map['pricePerHour'] as num?)?.toDouble() ?? 40.0,
+            isCovered: map['covered'] == true,
+            hasCctv: map['cctv'] == true,
+            isVerified: true,
+            position: LatLng(lat, lng),
+            availableBays: (map['availableBays'] as num?)?.toInt() ?? 1,
+          );
+        }).toList();
+
+        if (mounted) {
+          setState(() {
+            _nearbySpots = liveSpots;
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('[SearchScreen] Fetch backend spots: $e');
     }
   }
 

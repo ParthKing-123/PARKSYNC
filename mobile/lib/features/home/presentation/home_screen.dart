@@ -3,6 +3,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:parksync/l10n/app_localizations.dart';
+import '../../../core/api_client.dart';
 import '../../../core/locale_provider.dart';
 import '../../../core/theme_provider.dart';
 import '../../../core/user_state_service.dart';
@@ -24,60 +25,88 @@ class _HomeScreenState extends State<HomeScreen> {
   int _navIndex = 0;
   final TextEditingController _searchCtrl = TextEditingController();
   String _selectedFilter = 'All';
-  final Set<String> _savedSpotIds = {'p1', 'p2'};
+  final Set<String> _savedSpotIds = {};
 
-  final List<Map<String, dynamic>> _spots = [
-    {
-      'id': 'p1',
-      'name': 'Metro Grand Parking Bay',
-      'area': 'Station Central Hub',
-      'distance': '0.3',
-      'rate': 50,
-      'covered': true,
-      'cctv': true,
-      'verified': true,
-      'available': 4,
-    },
-    {
-      'id': 'p2',
-      'name': 'Central Commercial Plaza',
-      'area': 'Business District',
-      'distance': '1.1',
-      'rate': 40,
-      'covered': true,
-      'cctv': true,
-      'verified': true,
-      'available': 12,
-    },
-    {
-      'id': 'p3',
-      'name': 'Tech Hub Multi-Level Lot',
-      'area': 'Cyber Park Avenue',
-      'distance': '2.0',
-      'rate': 30,
-      'covered': false,
-      'cctv': true,
-      'verified': true,
-      'available': 8,
-    },
-    {
-      'id': 'p4',
-      'name': 'Station Road Secure Bay',
-      'area': 'Terminal North Gate',
-      'distance': '3.2',
-      'rate': 25,
-      'covered': true,
-      'cctv': false,
-      'verified': true,
-      'available': 18,
-    },
-  ];
+  List<Map<String, dynamic>> _spots = [];
+  bool _isLoadingSpots = true;
+  List<Map<String, dynamic>> _userBookings = [];
+  bool _isLoadingBookings = false;
 
   @override
   void initState() {
     super.initState();
     _fetchLocation();
     _loadSavedVehicle();
+    _fetchSpots();
+    _fetchBookings();
+  }
+
+  Future<void> _fetchSpots() async {
+    setState(() => _isLoadingSpots = true);
+    try {
+      final response = await ApiClient().dio.get('/parking');
+      if (response.data is List) {
+        final list = (response.data as List).map((item) {
+          final map = Map<String, dynamic>.from(item as Map);
+          final hostName = map['provider']?['displayName'] ??
+              map['provider']?['user']?['name'] ??
+              'Authorized Host';
+          final totalBays = map['totalBays'] ?? 1;
+          final availBays = map['availableBays'] ?? totalBays;
+          return {
+            'id': map['id']?.toString() ?? '',
+            'name': map['title']?.toString() ?? 'ParkSync Bay',
+            'area': map['area']?.toString() ?? map['city']?.toString() ?? 'Central Hub',
+            'city': map['city']?.toString() ?? '',
+            'address': map['address']?.toString() ?? '',
+            'distance': '0.5',
+            'rate': (map['pricePerHour'] as num?)?.round() ?? 40,
+            'covered': map['covered'] == true,
+            'cctv': map['cctv'] == true,
+            'security': map['security'] == true,
+            'verified': true,
+            'available': availBays,
+            'total': totalBays,
+            'hostName': hostName,
+            'spaceType': map['spaceType']?.toString() ?? 'Standard Bay',
+          };
+        }).toList();
+
+        if (mounted) {
+          setState(() {
+            _spots = list;
+            _isLoadingSpots = false;
+          });
+        }
+        return;
+      }
+    } catch (e) {
+      debugPrint('[HomeScreen] Fetch spots error: $e');
+    }
+    if (mounted) {
+      setState(() => _isLoadingSpots = false);
+    }
+  }
+
+  Future<void> _fetchBookings() async {
+    setState(() => _isLoadingBookings = true);
+    try {
+      final response = await ApiClient().dio.get('/bookings/my-bookings');
+      if (response.data is List && mounted) {
+        setState(() {
+          _userBookings = (response.data as List)
+              .map((b) => Map<String, dynamic>.from(b as Map))
+              .toList();
+          _isLoadingBookings = false;
+        });
+        return;
+      }
+    } catch (e) {
+      debugPrint('[HomeScreen] Fetch bookings error: $e');
+    }
+    if (mounted) {
+      setState(() => _isLoadingBookings = false);
+    }
   }
 
   Future<void> _loadSavedVehicle() async {
@@ -324,9 +353,13 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildExploreView(BuildContext context, bool isEn, bool isDark) {
     final spots = _filteredSpots;
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 18.0, vertical: 16.0),
-      child: Column(
+    return RefreshIndicator(
+      onRefresh: _fetchSpots,
+      color: AppTheme.forestGreen,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: 18.0, vertical: 16.0),
+        child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Auto GPS / Location Neumorphic Card
@@ -524,28 +557,70 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           const SizedBox(height: 10),
 
-          // Spots List
-          ListView.separated(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: spots.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 14),
-            itemBuilder: (context, i) {
-              final spot = spots[i];
-              final isSaved = _savedSpotIds.contains(spot['id']);
-              return _HomeSpotCard(
-                spot: spot,
-                isSaved: isSaved,
-                onTap: () => context.push('/parking-detail', extra: spot['id']),
-                onToggleSave: () => _toggleSaveSpot(spot['id'], spot['name']),
-              );
-            },
-          ),
+          // Spots List with Real-time Loading & Empty States
+          if (_isLoadingSpots) ...[
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.symmetric(vertical: 40.0),
+                child: CircularProgressIndicator(strokeWidth: 2.5, color: AppTheme.forestGreen),
+              ),
+            ),
+          ] else if (spots.isEmpty) ...[
+            NeumorphicCard(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 32),
+              radius: 18,
+              child: Column(
+                children: [
+                  Icon(Icons.local_parking_rounded, size: 48, color: Theme.of(context).colorScheme.outline),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'No Live Parking Spaces Yet',
+                    style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Be the first parking owner to list your bay or driveway and start earning!',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.outline),
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Theme.of(context).colorScheme.primary,
+                      foregroundColor: AppTheme.butter,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    onPressed: () => context.push('/provider-onboarding'),
+                    icon: const Icon(Icons.add_business_rounded, size: 18),
+                    label: const Text('List a Parking Space'),
+                  ),
+                ],
+              ),
+            ),
+          ] else ...[
+            ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: spots.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 14),
+              itemBuilder: (context, i) {
+                final spot = spots[i];
+                final isSaved = _savedSpotIds.contains(spot['id']);
+                return _HomeSpotCard(
+                  spot: spot,
+                  isSaved: isSaved,
+                  onTap: () => context.push('/parking-detail', extra: spot['id']),
+                  onToggleSave: () => _toggleSaveSpot(spot['id'], spot['name']),
+                );
+              },
+            ),
+          ],
           const SizedBox(height: 24),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildFilterChip(String label, bool isDark) {
     final isSelected = _selectedFilter == label;
@@ -637,23 +712,234 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildBookingsView(BuildContext context, bool isDark) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(20.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('My Reservations', style: Theme.of(context).textTheme.displayMedium),
-          const SizedBox(height: 4),
-          Text('Active parking passes, QR entry codes, and receipts.',
-              style: Theme.of(context).textTheme.bodyMedium),
-          const SizedBox(height: 20),
-          _ActiveBookingCard(
-            onTap: () {
-              context.push('/capture-evidence',
-                  extra: {'bookingId': 'bk_live_01', 'type': 'BEFORE'});
-            },
-          ),
-        ],
+    return RefreshIndicator(
+      onRefresh: _fetchBookings,
+      color: AppTheme.forestGreen,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('My Reservations (${_userBookings.length})',
+                    style: Theme.of(context).textTheme.displayMedium),
+                IconButton(
+                  icon: const Icon(Icons.refresh_rounded),
+                  tooltip: 'Refresh Bookings',
+                  onPressed: _fetchBookings,
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Real-time booking requests, host confirmation status, and parking passes.',
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 20),
+
+            if (_isLoadingBookings) ...[
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: 40.0),
+                  child: CircularProgressIndicator(strokeWidth: 2.5, color: AppTheme.forestGreen),
+                ),
+              ),
+            ] else if (_userBookings.isEmpty) ...[
+              NeumorphicCard(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 32),
+                radius: 18,
+                child: Column(
+                  children: [
+                    Icon(Icons.receipt_long_rounded, size: 48, color: Theme.of(context).colorScheme.outline),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'No Reservations Yet',
+                      style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Search and reserve parking bays near your travel destination in advance.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.outline),
+                    ),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Theme.of(context).colorScheme.primary,
+                        foregroundColor: AppTheme.butter,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      onPressed: () => setState(() => _navIndex = 0),
+                      child: const Text('Explore Nearby Spots'),
+                    ),
+                  ],
+                ),
+              ),
+            ] else ...[
+              ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: _userBookings.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 16),
+                itemBuilder: (context, i) {
+                  final b = _userBookings[i];
+                  final status = (b['status'] ?? 'PENDING').toString().toUpperCase();
+                  final ref = b['bookingReference'] ?? 'BK-REQ';
+                  final space = b['parkingSpace'] ?? {};
+                  final spaceTitle = space['title'] ?? 'ParkSync Bay';
+                  final address = space['address'] ?? '';
+                  final amount = '₹${b['totalAmount'] ?? '40.0'}';
+                  final paymentMethod = b['paymentMethod'] == 'UPI' ? 'UPI' : 'Cash on Arrival';
+                  final hostName = b['hostName'] ?? 'Authorized Host';
+                  final hostPhone = b['hostPhone'] ?? 'Contact upon confirmation';
+
+                  Color statusColor = AppTheme.amber;
+                  String statusLabel = 'Awaiting Host Approval';
+                  IconData statusIcon = Icons.hourglass_top_rounded;
+
+                  if (status == 'CONFIRMED' || status == 'ACTIVE') {
+                    statusColor = AppTheme.success;
+                    statusLabel = 'Host Approved ● Ready';
+                    statusIcon = Icons.check_circle_rounded;
+                  } else if (status == 'REJECTED') {
+                    statusColor = AppTheme.error;
+                    statusLabel = 'Request Declined';
+                    statusIcon = Icons.cancel_rounded;
+                  } else if (status == 'COMPLETED') {
+                    statusColor = Colors.blue;
+                    statusLabel = 'Completed';
+                    statusIcon = Icons.task_alt_rounded;
+                  }
+
+                  return NeumorphicCard(
+                    padding: const EdgeInsets.all(16),
+                    radius: 18,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'REF: #$ref',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w800,
+                                color: Theme.of(context).colorScheme.outline,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: statusColor.withValues(alpha: 0.14),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(statusIcon, size: 12, color: statusColor),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    statusLabel,
+                                    style: TextStyle(
+                                      color: statusColor,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          spaceTitle,
+                          style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+                        ),
+                        if (address.isNotEmpty) ...[
+                          const SizedBox(height: 3),
+                          Text(
+                            address,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Theme.of(context).colorScheme.outline,
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: 12),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              '$amount • $paymentMethod',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w800,
+                                fontSize: 14,
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
+                            ),
+                            if (status == 'CONFIRMED' || status == 'ACTIVE')
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.success.withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: const Text(
+                                  'Slot Reserved',
+                                  style: TextStyle(
+                                    color: AppTheme.success,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                        const Divider(height: 20),
+
+                        // Host details & privacy
+                        Row(
+                          children: [
+                            Icon(
+                              (status == 'CONFIRMED' || status == 'ACTIVE')
+                                  ? Icons.phone_in_talk_rounded
+                                  : Icons.lock_outline_rounded,
+                              size: 16,
+                              color: (status == 'CONFIRMED' || status == 'ACTIVE')
+                                  ? AppTheme.success
+                                  : Theme.of(context).colorScheme.outline,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                (status == 'CONFIRMED' || status == 'ACTIVE')
+                                    ? 'Host: $hostName ($hostPhone)'
+                                    : 'Host: $hostName (Phone hidden for privacy until approved)',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: (status == 'CONFIRMED' || status == 'ACTIVE')
+                                      ? (isDark ? AppTheme.butter : AppTheme.forestGreen)
+                                      : Theme.of(context).colorScheme.outline,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
@@ -1074,7 +1360,7 @@ class _HomeSpotCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  spot['name'],
+                  spot['name'] ?? 'ParkSync Bay',
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                         fontWeight: FontWeight.w800,
                         fontSize: 14,
@@ -1084,12 +1370,52 @@ class _HomeSpotCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 3),
                 Text(
-                  '${spot['distance']} km away • ${spot['available']} bays free',
+                  '${spot['available']} / ${spot['total'] ?? spot['available']} bays free • ${spot['area'] ?? ''}',
                   style: TextStyle(
                     color: Theme.of(context).colorScheme.outline,
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
                   ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Host: ${spot['hostName'] ?? 'Verified Host'}',
+                  style: TextStyle(
+                    color: primaryColor,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    if (spot['covered'] == true) ...[
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                        decoration: BoxDecoration(
+                          color: primaryColor.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          'Covered',
+                          style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: primaryColor),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                    ],
+                    if (spot['cctv'] == true)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                        decoration: BoxDecoration(
+                          color: AppTheme.success.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: const Text(
+                          'CCTV',
+                          style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: AppTheme.success),
+                        ),
+                      ),
+                  ],
                 ),
               ],
             ),

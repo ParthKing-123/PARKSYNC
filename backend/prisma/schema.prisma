@@ -54,6 +54,7 @@ enum BookingStatus {
   CANCELLED
   NO_SHOW
   DISPUTED
+  REJECTED
 }
 
 enum PaymentStatus {
@@ -101,6 +102,10 @@ model ProviderProfile {
   verificationStatus VerificationStatus @default(UNVERIFIED)
   displayName        String?
   description        String?
+  documentType       String?
+  documentName       String?
+  documentSize       Int?
+  documentUrl        String?
   createdAt          DateTime           @default(now())
   updatedAt          DateTime           @updatedAt
 
@@ -194,8 +199,10 @@ model ParkingSpace {
   pricePerHour        Float
   minimumDuration     Int                @default(1) // hours
   maximumDuration     Int?               // hours
-  status              ListingStatus      @default(DRAFT)
-  verificationStatus  VerificationStatus @default(UNVERIFIED)
+  totalBays           Int                @default(1)
+  availableBays       Int                @default(1)
+  status              ListingStatus      @default(ACTIVE)
+  verificationStatus  VerificationStatus @default(VERIFIED)
   createdAt           DateTime           @default(now())
   updatedAt           DateTime           @updatedAt
 
@@ -233,12 +240,13 @@ model Booking {
   bookingReference String        @unique
   userId           String
   parkingSpaceId   String
-  vehicleId        String
+  vehicleId        String?
   startTime        DateTime
   endTime          DateTime
   price            Float
   platformFee      Float
   totalAmount      Float
+  paymentMethod    String?       @default("CASH_ON_ARRIVAL")
   status           BookingStatus @default(PENDING)
   qrCode           String?
   createdAt        DateTime      @default(now())
@@ -246,7 +254,7 @@ model Booking {
 
   user             User          @relation(fields: [userId], references: [id])
   parkingSpace     ParkingSpace  @relation(fields: [parkingSpaceId], references: [id])
-  vehicle          Vehicle       @relation(fields: [vehicleId], references: [id])
+  vehicle          Vehicle?      @relation(fields: [vehicleId], references: [id])
   payment          Payment?
   review           Review?
   evidence         BookingEvidence[]

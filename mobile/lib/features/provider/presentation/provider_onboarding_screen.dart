@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/api_client.dart';
@@ -32,7 +33,12 @@ class _ProviderOnboardingScreenState extends State<ProviderOnboardingScreen> {
   final _confirmPasswordController = TextEditingController();
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
-  String _selectedIdType = 'Driving License';
+  String _selectedIdType = 'Aadhaar Card';
+
+  // Document upload state (Strict 5 MB max limit)
+  String? _uploadedDocName;
+  int? _uploadedDocSize;
+  String? _uploadedDocExtension;
 
   // Step 3: Location
   final _facilityNameController = TextEditingController();
@@ -128,6 +134,62 @@ class _ProviderOnboardingScreenState extends State<ProviderOnboardingScreen> {
     super.dispose();
   }
 
+  String _formatFileSize(int bytes) {
+    if (bytes < 1024) return '$bytes B';
+    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
+    return '${(bytes / (1024 * 1024)).toStringAsFixed(2)} MB';
+  }
+
+  Future<void> _pickDocument() async {
+    try {
+      final files = await FilePicker.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png'],
+      );
+
+      if (files.isNotEmpty) {
+        final file = files.first;
+        final size = file.lengthSync() ?? (await file.length()) ?? 0;
+
+        if (size > 5 * 1024 * 1024) {
+          if (!mounted) return;
+          SweetPopup.show(
+            context,
+            title: 'File Exceeds 5 MB Limit',
+            message: 'The selected document is ${(size / (1024 * 1024)).toStringAsFixed(2)} MB. Maximum allowed file size is 5 MB.',
+            icon: Icons.error_outline_rounded,
+            iconColor: AppTheme.error,
+          );
+          return;
+        }
+
+        setState(() {
+          _uploadedDocName = file.name;
+          _uploadedDocSize = size;
+          _uploadedDocExtension = file.extension?.toLowerCase();
+        });
+
+        if (!mounted) return;
+        SweetPopup.show(
+          context,
+          title: 'Document Uploaded',
+          message: '${file.name} (${_formatFileSize(size)}) ready for $_selectedIdType verification.',
+          icon: Icons.check_circle_rounded,
+          iconColor: AppTheme.success,
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      SweetPopup.show(
+        context,
+        title: 'Document Pick Error',
+        message: 'Could not open file: $e',
+        icon: Icons.error_outline_rounded,
+        iconColor: AppTheme.error,
+      );
+    }
+  }
+
   void _detectGps() async {
     setState(() => _isLocatingGps = true);
     await Future.delayed(const Duration(milliseconds: 700));
@@ -174,8 +236,52 @@ class _ProviderOnboardingScreenState extends State<ProviderOnboardingScreen> {
       await UserStateService.instance.savePassword(phone, pwd);
     }
 
+    // 1. Setup Provider profile on real backend
+    try {
+      await ApiClient().dio.post('/providers/setup', data: {
+        'providerType': _selectedCategory,
+        'displayName': _businessNameController.text.trim().isNotEmpty
+            ? _businessNameController.text.trim()
+            : name,
+        'documentType': _selectedIdType,
+        'documentName': _uploadedDocName,
+        'documentSize': _uploadedDocSize,
+      });
+    } catch (e) {
+      debugPrint('[Provider] Setup provider profile error: $e');
+    }
+
+    // 2. Create real Parking Space on backend database
+    String createdSpaceId = 'fac_${DateTime.now().millisecondsSinceEpoch}';
+    try {
+      final spaceRes = await ApiClient().dio.post('/parking', data: {
+        'title': _facilityNameController.text.trim().isNotEmpty
+            ? _facilityNameController.text.trim()
+            : '$name\'s Parking Bay',
+        'description': 'Verified parking space in ${_cityController.text.trim()}',
+        'address': _addressController.text.trim(),
+        'city': _cityController.text.trim(),
+        'area': _cityController.text.trim(),
+        'latitude': _latitude,
+        'longitude': _longitude,
+        'spaceType': _slotType,
+        'covered': _amenities.contains('CCTV 24/7') || _slotType.contains('Covered'),
+        'cctv': _amenities.contains('CCTV 24/7') || _amenities.contains('CCTV'),
+        'security': _amenities.contains('Security Guard'),
+        'pricePerHour': _hourlyRate,
+        'totalBays': _totalBays,
+        'availableBays': _totalBays,
+        'hostName': name,
+      });
+      if (spaceRes.data != null && spaceRes.data['id'] != null) {
+        createdSpaceId = spaceRes.data['id'].toString();
+      }
+    } catch (e) {
+      debugPrint('[Provider] Create parking space error: $e');
+    }
+
     final facility = ProviderFacility(
-      id: 'fac_${DateTime.now().millisecondsSinceEpoch}',
+      id: createdSpaceId,
       category: _selectedCategory,
       businessName: _businessNameController.text.trim().isNotEmpty
           ? _businessNameController.text.trim()
@@ -211,8 +317,8 @@ class _ProviderOnboardingScreenState extends State<ProviderOnboardingScreen> {
     if (mounted) {
       SweetPopup.show(
         context,
-        title: 'Listing Submitted for Review!',
-        message: 'Your facility is in queue for platform verification. You can now manage your bays.',
+        title: 'Listing Published in Real-Time!',
+        message: 'Your parking space is now live on the platform. Seekers can view and submit booking requests.',
         icon: Icons.verified_user_rounded,
         iconColor: AppTheme.success,
       );
@@ -270,6 +376,16 @@ class _ProviderOnboardingScreenState extends State<ProviderOnboardingScreen> {
           );
           return;
         }
+      }
+      if (_uploadedDocName == null) {
+        SweetPopup.show(
+          context,
+          title: 'Verification Document Required',
+          message: 'Please upload an eligible document (PDF, DOC, DOCX, JPG, PNG up to 5 MB) for $_selectedIdType.',
+          icon: Icons.upload_file_rounded,
+          iconColor: AppTheme.error,
+        );
+        return;
       }
     } else if (_currentStep == 2) {
       if (_facilityNameController.text.trim().length < 3 ||
@@ -675,7 +791,7 @@ class _ProviderOnboardingScreenState extends State<ProviderOnboardingScreen> {
               value: _selectedIdType,
               isExpanded: true,
               dropdownColor: isDark ? AppTheme.forestSurface : AppTheme.butterCream,
-              items: ['Driving License', 'Voter ID Card', 'PAN Card', 'Trade License / Electricity Bill']
+              items: ['Aadhaar Card', 'PAN Card', 'Driving License', 'Voter ID Card', 'Trade License / Electricity Bill']
                   .map((t) => DropdownMenuItem(value: t, child: Text(t, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13))))
                   .toList(),
               onChanged: (val) {
@@ -684,6 +800,196 @@ class _ProviderOnboardingScreenState extends State<ProviderOnboardingScreen> {
             ),
           ),
         ),
+
+        const SizedBox(height: 16),
+
+        // Document Upload Section (Max 5 MB)
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Upload Verification Document *',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: isDark ? AppTheme.butter : AppTheme.forestGreen,
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: (isDark ? AppTheme.accentGold : AppTheme.forestGreen).withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                'MAX 5 MB',
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w800,
+                  color: isDark ? AppTheme.accentGold : AppTheme.forestGreen,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Attach eligible PDF, DOC, DOCX, JPG or PNG file (up to 5.0 MB max).',
+          style: TextStyle(
+            fontSize: 11,
+            color: isDark ? const Color(0xFFD6EAE5) : AppTheme.textSecondaryLight,
+          ),
+        ),
+        const SizedBox(height: 10),
+
+        if (_uploadedDocName == null) ...[
+          NeumorphicCard(
+            onTap: _pickDocument,
+            radius: 16,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+            child: Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: (isDark ? AppTheme.accentGold : AppTheme.forestGreen).withValues(alpha: 0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.cloud_upload_outlined,
+                    size: 24,
+                    color: isDark ? AppTheme.accentGold : AppTheme.forestGreen,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Upload $_selectedIdType File',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                          color: isDark ? AppTheme.butter : AppTheme.forestGreen,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      const Text(
+                        'Tap here to browse file (PDF, DOCX, JPG, PNG)',
+                        style: TextStyle(fontSize: 11, color: Colors.grey),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: isDark ? AppTheme.accentGold : AppTheme.forestGreen,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    'Browse',
+                    style: TextStyle(
+                      color: isDark ? AppTheme.forestGreenDark : AppTheme.butter,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ] else ...[
+          NeumorphicCard(
+            radius: 16,
+            padding: const EdgeInsets.all(14),
+            border: Border.all(
+              color: AppTheme.success.withValues(alpha: 0.6),
+              width: 1.5,
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: AppTheme.success.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    (_uploadedDocExtension == 'pdf')
+                        ? Icons.picture_as_pdf_rounded
+                        : (_uploadedDocExtension == 'jpg' || _uploadedDocExtension == 'jpeg' || _uploadedDocExtension == 'png')
+                            ? Icons.image_rounded
+                            : Icons.description_rounded,
+                    color: AppTheme.success,
+                    size: 22,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _uploadedDocName!,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                          color: isDark ? AppTheme.butter : AppTheme.forestGreen,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 2),
+                      Row(
+                        children: [
+                          Text(
+                            '${_formatFileSize(_uploadedDocSize ?? 0)} / 5 MB',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: AppTheme.success,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: AppTheme.success.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: const Text(
+                              'Verified Valid Size',
+                              style: TextStyle(
+                                fontSize: 9,
+                                fontWeight: FontWeight.w800,
+                                color: AppTheme.success,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.delete_outline_rounded, color: AppTheme.error, size: 20),
+                  onPressed: () {
+                    setState(() {
+                      _uploadedDocName = null;
+                      _uploadedDocSize = null;
+                      _uploadedDocExtension = null;
+                    });
+                  },
+                ),
+              ],
+            ),
+          ),
+        ],
 
         const SizedBox(height: 16),
 

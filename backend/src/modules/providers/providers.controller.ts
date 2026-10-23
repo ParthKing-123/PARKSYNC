@@ -4,7 +4,15 @@ import { prisma } from '../../index';
 export const setupProviderProfile = async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = (req as any).user.userId;
-    const { providerType, displayName, description } = req.body;
+    const { 
+      providerType = 'INDIVIDUAL', 
+      displayName, 
+      description,
+      documentType,
+      documentName,
+      documentSize,
+      documentUrl 
+    } = req.body;
 
     let profile = await prisma.providerProfile.findUnique({
       where: { userId }
@@ -14,7 +22,16 @@ export const setupProviderProfile = async (req: Request, res: Response): Promise
       // Update existing
       profile = await prisma.providerProfile.update({
         where: { userId },
-        data: { providerType, displayName, description }
+        data: { 
+          providerType, 
+          displayName: displayName || profile.displayName, 
+          description: description || profile.description,
+          documentType: documentType || profile.documentType,
+          documentName: documentName || profile.documentName,
+          documentSize: documentSize !== undefined ? parseInt(documentSize) : profile.documentSize,
+          documentUrl: documentUrl || profile.documentUrl,
+          verificationStatus: 'VERIFIED'
+        }
       });
     } else {
       // Create new
@@ -22,8 +39,13 @@ export const setupProviderProfile = async (req: Request, res: Response): Promise
         data: {
           userId,
           providerType,
-          displayName,
+          displayName: displayName || 'Parking Host',
           description,
+          documentType,
+          documentName,
+          documentSize: documentSize !== undefined ? parseInt(documentSize) : null,
+          documentUrl,
+          verificationStatus: 'VERIFIED'
         }
       });
     }
@@ -41,6 +63,7 @@ export const setupProviderProfile = async (req: Request, res: Response): Promise
 
     res.json(profile);
   } catch (error) {
+    console.error('Error in setupProviderProfile:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };

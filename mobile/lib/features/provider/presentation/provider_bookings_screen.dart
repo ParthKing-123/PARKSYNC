@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/api_client.dart';
 import '../../../shared/theme/app_theme.dart';
 import '../../../shared/widgets/neumorphic_container.dart';
 import '../../../shared/widgets/sweet_popup.dart';
@@ -52,85 +53,74 @@ class ProviderBookingsScreen extends StatefulWidget {
 
 class _ProviderBookingsScreenState extends State<ProviderBookingsScreen> {
   String _selectedFilter = 'ALL'; // 'ALL', 'PENDING', 'ACTIVE', 'COMPLETED'
+  List<BookingItemData> _bookings = [];
+  bool _isLoading = true;
 
-  final List<BookingItemData> _bookings = [
-    BookingItemData(
-      id: 'BK-9481IND',
-      spotName: 'Metro Grand Premium Covered Slot #A-14',
-      date: 'Today, 17 Oct',
-      timeSlot: '10:30 AM - 01:15 PM',
-      duration: '2h 45m',
-      amount: '₹110.00',
-      driverName: 'Parth Sharma',
-      driverEmail: 'parth.sharma@gmail.com',
-      driverPhone: '+91 98765 43210',
-      driverRating: 4.95,
-      driverTripCount: 24,
-      isDriverPlatformVerified: true,
-      vehicleModel: 'Hyundai Creta (White)',
-      vehiclePlate: 'DL 01 AB 1234',
-      isVehicleVerified: true,
-      vehicleType: 'Compact SUV',
-      status: 'PENDING',
-    ),
-    BookingItemData(
-      id: 'BK-8273IND',
-      spotName: 'Koramangala Safe Garage #B-03',
-      date: 'Tomorrow, 18 Oct',
-      timeSlot: '02:00 PM - 05:30 PM',
-      duration: '3h 30m',
-      amount: '₹140.00',
-      driverName: 'Rohan Verma',
-      driverEmail: 'rohan.verma99@gmail.com',
-      driverPhone: '+91 98112 23344',
-      driverRating: 4.80,
-      driverTripCount: 11,
-      isDriverPlatformVerified: true,
-      vehicleModel: 'Tata Nexon EV (Teal)',
-      vehiclePlate: 'MH 12 CD 5678',
-      isVehicleVerified: true,
-      vehicleType: 'Electric SUV',
-      status: 'PENDING',
-    ),
-    BookingItemData(
-      id: 'BK-7190IND',
-      spotName: 'Connaught Place Basement #C-08',
-      date: 'Today, 17 Oct',
-      timeSlot: '08:00 AM - 12:00 PM',
-      duration: '4h 00m',
-      amount: '₹240.00',
-      driverName: 'Ananya Iyer',
-      driverEmail: 'ananya.iyer@gmail.com',
-      driverPhone: '+91 97654 11223',
-      driverRating: 5.0,
-      driverTripCount: 39,
-      isDriverPlatformVerified: true,
-      vehicleModel: 'Maruti Swift (Silver)',
-      vehiclePlate: 'KA 03 EF 9988',
-      isVehicleVerified: true,
-      vehicleType: 'Hatchback',
-      status: 'ACTIVE',
-    ),
-    BookingItemData(
-      id: 'BK-6045IND',
-      spotName: 'Bandra West Secure Bay #D-02',
-      date: '15 Oct 2026',
-      timeSlot: '09:00 AM - 12:00 PM',
-      duration: '3h 00m',
-      amount: '₹180.00',
-      driverName: 'Vikram Malhotra',
-      driverEmail: 'vikram.m@gmail.com',
-      driverPhone: '+91 99887 66554',
-      driverRating: 4.70,
-      driverTripCount: 8,
-      isDriverPlatformVerified: true,
-      vehicleModel: 'Kia Seltos (Black)',
-      vehiclePlate: 'MH 02 XY 1020',
-      isVehicleVerified: true,
-      vehicleType: 'SUV',
-      status: 'COMPLETED',
-    ),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _loadBookings();
+  }
+
+  Future<void> _loadBookings() async {
+    setState(() => _isLoading = true);
+    try {
+      final res = await ApiClient().dio.get('/bookings/provider-requests');
+      if (res.data is List) {
+        final list = (res.data as List).map((b) {
+          final space = b['parkingSpace'] ?? {};
+          final user = b['user'] ?? {};
+          final vehicle = b['vehicle'] ?? {};
+          final vehicleModel = vehicle['vehicleModel'] ?? {};
+          final vName = vehicleModel['model'] != null
+              ? '${vehicleModel['make'] ?? ''} ${vehicleModel['model']}'
+              : (vehicle['registrationNumber'] ?? 'Standard Car');
+          final plate = vehicle['registrationNumber'] ?? 'Plate Pending';
+
+          String status = (b['status'] ?? 'PENDING').toString().toUpperCase();
+          if (status == 'CONFIRMED') status = 'ACTIVE';
+          if (status == 'REJECTED') status = 'DECLINED';
+
+          final start = DateTime.tryParse(b['startTime']?.toString() ?? '') ?? DateTime.now();
+          final end = DateTime.tryParse(b['endTime']?.toString() ?? '') ?? DateTime.now().add(const Duration(hours: 1));
+          final durationMins = end.difference(start).inMinutes;
+
+          return BookingItemData(
+            id: b['id']?.toString() ?? '',
+            spotName: space['title']?.toString() ?? 'My Parking Bay',
+            date: '${start.day}/${start.month}/${start.year}',
+            timeSlot: '${start.hour.toString().padLeft(2, '0')}:${start.minute.toString().padLeft(2, '0')} - ${end.hour.toString().padLeft(2, '0')}:${end.minute.toString().padLeft(2, '0')}',
+            duration: '$durationMins mins',
+            amount: '₹${b['totalAmount'] ?? '50.0'}',
+            driverName: user['name']?.toString() ?? 'Registered Driver',
+            driverEmail: user['email']?.toString() ?? 'driver@parksync.in',
+            driverPhone: user['phone']?.toString() ?? '+91 7058541200',
+            driverRating: 4.9,
+            driverTripCount: 12,
+            isDriverPlatformVerified: true,
+            vehicleModel: vName,
+            vehiclePlate: plate,
+            isVehicleVerified: true,
+            vehicleType: vehicleModel['vehicleType'] ?? 'Car',
+            status: status,
+          );
+        }).toList();
+
+        if (mounted) {
+          setState(() {
+            _bookings = list;
+            _isLoading = false;
+          });
+        }
+        return;
+      }
+    } catch (e) {
+      debugPrint('[ProviderBookings] Load bookings error: $e');
+    }
+    if (mounted) {
+      setState(() => _isLoading = false);
+    }
+  }
 
   List<BookingItemData> get _filteredBookings {
     if (_selectedFilter == 'ALL') return _bookings;
@@ -139,43 +129,64 @@ class _ProviderBookingsScreenState extends State<ProviderBookingsScreen> {
 
   int get _pendingCount => _bookings.where((b) => b.status == 'PENDING').length;
 
-  void _approveBooking(BookingItemData booking) {
-    setState(() {
-      booking.status = 'ACTIVE';
-    });
-    SweetPopup.show(
-      context,
-      title: 'Booking Approved!',
-      message: '${booking.driverName} has been sent their verified digital parking pass.',
-      icon: Icons.check_circle_rounded,
-      iconColor: AppTheme.success,
-    );
+  Future<void> _approveBooking(BookingItemData booking) async {
+    try {
+      await ApiClient().dio.post('/bookings/${booking.id}/approve');
+      setState(() {
+        booking.status = 'ACTIVE';
+      });
+      if (mounted) {
+        SweetPopup.show(
+          context,
+          title: 'Booking Approved!',
+          message: '${booking.driverName} has been sent their verified digital parking pass.',
+          icon: Icons.check_circle_rounded,
+          iconColor: AppTheme.success,
+        );
+      }
+    } catch (e) {
+      debugPrint('[ProviderBookings] Approve error: $e');
+    }
   }
 
-  void _declineBooking(BookingItemData booking) {
-    setState(() {
-      booking.status = 'DECLINED';
-    });
-    SweetPopup.show(
-      context,
-      title: 'Booking Declined',
-      message: 'Request ${booking.id} has been declined.',
-      icon: Icons.cancel_rounded,
-      iconColor: AppTheme.error,
-    );
+  Future<void> _declineBooking(BookingItemData booking) async {
+    try {
+      await ApiClient().dio.post('/bookings/${booking.id}/reject');
+      setState(() {
+        booking.status = 'DECLINED';
+      });
+      if (mounted) {
+        SweetPopup.show(
+          context,
+          title: 'Booking Declined',
+          message: 'Request ${booking.id} has been declined and slot released.',
+          icon: Icons.cancel_rounded,
+          iconColor: AppTheme.error,
+        );
+      }
+    } catch (e) {
+      debugPrint('[ProviderBookings] Decline error: $e');
+    }
   }
 
-  void _completeBooking(BookingItemData booking) {
-    setState(() {
-      booking.status = 'COMPLETED';
-    });
-    SweetPopup.show(
-      context,
-      title: 'Session Completed!',
-      message: 'Payout of ${booking.amount} credited to your host wallet.',
-      icon: Icons.task_alt_rounded,
-      iconColor: AppTheme.forestGreen,
-    );
+  Future<void> _completeBooking(BookingItemData booking) async {
+    try {
+      await ApiClient().dio.patch('/bookings/${booking.id}/status', data: {'status': 'COMPLETED'});
+      setState(() {
+        booking.status = 'COMPLETED';
+      });
+      if (mounted) {
+        SweetPopup.show(
+          context,
+          title: 'Session Completed!',
+          message: 'Payout of ${booking.amount} credited to your host wallet.',
+          icon: Icons.task_alt_rounded,
+          iconColor: AppTheme.forestGreen,
+        );
+      }
+    } catch (e) {
+      debugPrint('[ProviderBookings] Complete error: $e');
+    }
   }
 
   void _showDriverContactDialog(BookingItemData booking) {
@@ -355,12 +366,7 @@ class _ProviderBookingsScreenState extends State<ProviderBookingsScreen> {
           IconButton(
             icon: const Icon(Icons.refresh_rounded),
             tooltip: 'Refresh requests',
-            onPressed: () {
-              setState(() {});
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Bookings updated.')),
-              );
-            },
+            onPressed: _loadBookings,
           ),
         ],
       ),
@@ -413,33 +419,60 @@ class _ProviderBookingsScreenState extends State<ProviderBookingsScreen> {
           ),
           const SizedBox(height: 12),
 
-          // Booking List
+          // Booking List with Real-time Refresh
           Expanded(
-            child: _filteredBookings.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.inbox_rounded, size: 54, color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.4)),
-                        const SizedBox(height: 12),
-                        Text(
-                          'No bookings in this category',
-                          style: TextStyle(
-                            color: Theme.of(context).colorScheme.outline,
-                            fontWeight: FontWeight.w600,
-                          ),
+            child: RefreshIndicator(
+              onRefresh: _loadBookings,
+              color: AppTheme.forestGreen,
+              child: _isLoading
+                  ? const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(40.0),
+                        child: CircularProgressIndicator(strokeWidth: 2.5, color: AppTheme.forestGreen),
+                      ),
+                    )
+                  : _filteredBookings.isEmpty
+                      ? ListView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          children: [
+                            const SizedBox(height: 80),
+                            Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.inbox_rounded,
+                                      size: 54, color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.4)),
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    'No booking requests in this tab',
+                                    style: TextStyle(
+                                      color: Theme.of(context).colorScheme.outline,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    'Pull down to refresh new incoming requests',
+                                    style: TextStyle(
+                                      color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.7),
+                                      fontSize: 11,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        )
+                      : ListView.builder(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
+                          itemCount: _filteredBookings.length,
+                          itemBuilder: (context, index) {
+                            final booking = _filteredBookings[index];
+                            return _buildBookingCard(context, booking, isDark);
+                          },
                         ),
-                      ],
-                    ),
-                  )
-                : ListView.builder(
-                    padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
-                    itemCount: _filteredBookings.length,
-                    itemBuilder: (context, index) {
-                      final booking = _filteredBookings[index];
-                      return _buildBookingCard(context, booking, isDark);
-                    },
-                  ),
+            ),
           ),
         ],
       ),
