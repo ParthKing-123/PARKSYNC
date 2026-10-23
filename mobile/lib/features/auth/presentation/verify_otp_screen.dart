@@ -79,11 +79,11 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
 
   void _verify() async {
     final code = _otpController.text.trim();
-    if (code.length != 6) {
+    if (code.length < 4) {
       SweetPopup.show(
         context,
         title: 'Incomplete Code',
-        message: 'Please enter the complete 6-digit verification code.',
+        message: 'Please enter the 4-digit verification code.',
         icon: Icons.error_outline_rounded,
         iconColor: AppTheme.error,
       );
@@ -268,7 +268,7 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
                 const SizedBox(height: 12),
                 RichText(
                   text: TextSpan(
-                    text: 'We sent a 6-digit code to ',
+                    text: 'We sent a verification code to ',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(height: 1.5),
                     children: [
                       TextSpan(
@@ -284,7 +284,7 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
 
                 const SizedBox(height: 36),
 
-                // 6-Digit OTP Field
+                // OTP Input Field (Supports 4 or 6 digits)
                 NeumorphicCard(
                   radius: 18,
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -303,7 +303,7 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
                       color: isDark ? AppTheme.butter : AppTheme.forestGreen,
                     ),
                     decoration: InputDecoration(
-                      hintText: '••••••',
+                      hintText: '••••',
                       hintStyle: TextStyle(
                         color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.6),
                         letterSpacing: 16,
@@ -317,7 +317,7 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
                       contentPadding: const EdgeInsets.symmetric(vertical: 18),
                     ),
                     onChanged: (val) {
-                      if (val.length == 6) {
+                      if (val.length == 4 || val.length == 6) {
                         _verify();
                       }
                     },

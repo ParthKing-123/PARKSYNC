@@ -509,7 +509,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                               size: 13, color: Theme.of(context).colorScheme.outline),
                           const SizedBox(width: 6),
                           Text(
-                            'Instant 6-digit SMS verification code',
+                            'Instant SMS verification code',
                             style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 11),
                           ),
                         ],
