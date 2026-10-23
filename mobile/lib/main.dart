@@ -3,12 +3,14 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:parksync/l10n/app_localizations.dart';
 import 'core/locale_provider.dart';
 import 'core/theme_provider.dart';
+import 'core/user_state_service.dart';
 import 'shared/theme/app_theme.dart';
 import 'core/router.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initThemeMode();
+  await UserStateService.instance.init();
   runApp(const ParkSyncApp());
 }
 

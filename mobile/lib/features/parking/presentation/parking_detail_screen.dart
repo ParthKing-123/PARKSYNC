@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:parksync/l10n/app_localizations.dart';
+import '../../../core/user_state_service.dart';
 import '../../../shared/theme/app_theme.dart';
 import '../../../shared/widgets/neumorphic_container.dart';
 import '../../../shared/widgets/sweet_popup.dart';
@@ -602,7 +603,8 @@ class _ParkingDetailScreenState extends State<ParkingDetailScreen> {
 
     if (!mounted) return;
 
-    if (token == null || token.isEmpty) {
+    final isLoggedIn = UserStateService.instance.isLoggedIn || (token != null && token.isNotEmpty);
+    if (!isLoggedIn) {
       _showLoginRequiredSheet();
     } else {
       context.push(

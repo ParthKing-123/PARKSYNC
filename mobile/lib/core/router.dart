@@ -5,6 +5,7 @@ import '../features/home/presentation/guest_home_screen.dart';
 import '../features/home/presentation/home_screen.dart';
 import '../features/onboarding/presentation/splash_screen.dart';
 import '../features/onboarding/presentation/role_selection_screen.dart';
+import '../features/onboarding/presentation/seeker_profile_screen.dart';
 import '../features/auth/presentation/login_screen.dart';
 import '../features/auth/presentation/verify_otp_screen.dart';
 import '../features/vehicles/presentation/add_vehicle_screen.dart';
@@ -17,6 +18,8 @@ import '../features/bookings/presentation/booking_checkout_screen.dart';
 import '../features/bookings/presentation/booking_confirmation_screen.dart';
 import '../features/bookings/presentation/capture_evidence_screen.dart';
 import '../features/reviews/presentation/add_review_screen.dart';
+import '../features/guide/presentation/user_guide_screen.dart';
+import '../features/legal/presentation/privacy_policy_screen.dart';
 
 /// Smooth fade and slide page transition for a premium application feel.
 CustomTransitionPage<T> _buildPage<T>({
@@ -76,10 +79,57 @@ final appRouter = GoRouter(
     ),
     GoRoute(
       path: '/verify-otp',
+      pageBuilder: (context, state) {
+        String phone = '';
+        String role = 'seeker';
+        if (state.extra is Map<String, dynamic>) {
+          final m = state.extra as Map<String, dynamic>;
+          phone = m['phone']?.toString() ?? '';
+          role = m['role']?.toString() ?? 'seeker';
+        } else if (state.extra is String) {
+          phone = state.extra as String;
+        }
+        return _buildPage(
+          state: state,
+          child: VerifyOtpScreen(phoneNumber: phone, role: role),
+        );
+      },
+    ),
+    // ── Seeker Onboarding Flow ───────────────────────────────────────
+    GoRoute(
+      path: '/seeker-profile-setup',
       pageBuilder: (context, state) => _buildPage(
         state: state,
-        child: VerifyOtpScreen(phoneNumber: state.extra as String? ?? ''),
+        child: const SeekerProfileScreen(),
       ),
+    ),
+    GoRoute(
+      path: '/seeker-vehicle-setup',
+      pageBuilder: (context, state) => _buildPage(
+        state: state,
+        child: const AddVehicleScreen(isFromOnboarding: true),
+      ),
+    ),
+    // ── Knowledge & Legal Pages ──────────────────────────────────────
+    GoRoute(
+      path: '/user-guide',
+      pageBuilder: (context, state) {
+        final tab = state.extra is int ? (state.extra as int) : 0;
+        return _buildPage(
+          state: state,
+          child: UserGuideScreen(initialTab: tab),
+        );
+      },
+    ),
+    GoRoute(
+      path: '/privacy-policy',
+      pageBuilder: (context, state) {
+        final tab = state.extra is int ? (state.extra as int) : 0;
+        return _buildPage(
+          state: state,
+          child: PrivacyPolicyScreen(initialTab: tab),
+        );
+      },
     ),
     // ── Logged-in home ────────────────────────────────────────────────
     GoRoute(

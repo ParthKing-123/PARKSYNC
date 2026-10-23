@@ -4,6 +4,7 @@ import 'package:parksync/l10n/app_localizations.dart';
 import '../../../shared/theme/app_theme.dart';
 import '../../../core/locale_provider.dart';
 import '../../../core/theme_provider.dart';
+import '../../../core/user_state_service.dart';
 import '../../../shared/widgets/neumorphic_container.dart';
 import '../../../shared/widgets/sweet_popup.dart';
 
@@ -224,12 +225,29 @@ class _GuestHomeScreenState extends State<GuestHomeScreen> {
 
                 const SizedBox(width: 8),
 
-                // Login Button
-                NeumorphicButton(
-                  height: 38,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  onPressed: () => context.push('/login'),
-                  child: const Text('Login'),
+                // Profile Avatar or Login Button
+                ListenableBuilder(
+                  listenable: UserStateService.instance,
+                  builder: (context, _) {
+                    final isLoggedIn = UserStateService.instance.isLoggedIn;
+                    if (isLoggedIn) {
+                      return InkWell(
+                        onTap: () => setState(() => _navIndex = 3),
+                        borderRadius: BorderRadius.circular(20),
+                        child: CircleAvatar(
+                          radius: 18,
+                          backgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
+                          child: Icon(Icons.person_rounded, size: 20, color: Theme.of(context).colorScheme.primary),
+                        ),
+                      );
+                    }
+                    return NeumorphicButton(
+                      height: 38,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      onPressed: () => context.push('/login'),
+                      child: const Text('Login'),
+                    );
+                  },
                 ),
               ],
             ),
@@ -363,6 +381,105 @@ class _GuestHomeScreenState extends State<GuestHomeScreen> {
                 ),
               ],
             ),
+          ),
+
+          const SizedBox(height: 14),
+
+          // ── Active Vehicle Selector / Fit Indicator ─────────────────────
+          ListenableBuilder(
+            listenable: UserStateService.instance,
+            builder: (context, _) {
+              final activeVehicle = UserStateService.instance.activeVehicle;
+              if (activeVehicle != null) {
+                return NeumorphicCard(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  radius: 16,
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: (isDark ? AppTheme.butter : AppTheme.forestGreen).withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(
+                          Icons.directions_car_rounded,
+                          color: isDark ? AppTheme.butter : AppTheme.forestGreen,
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Active Vehicle Fit',
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.outline,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            Text(
+                              '${activeVehicle.make} ${activeVehicle.model} • ${activeVehicle.plateNumber}',
+                              style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () => context.push('/add-vehicle'),
+                        child: Text(
+                          'Change',
+                          style: TextStyle(
+                            color: isDark ? AppTheme.butter : AppTheme.forestGreen,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              return NeumorphicCard(
+                onTap: () => context.push('/add-vehicle'),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                radius: 16,
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppTheme.amber.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(Icons.add_circle_outline_rounded, color: AppTheme.amber, size: 20),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'No Vehicle Selected',
+                            style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13),
+                          ),
+                          Text(
+                            'Add vehicle to check height clearance & bay fit',
+                            style: TextStyle(color: Theme.of(context).colorScheme.outline, fontSize: 11),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.arrow_forward_ios_rounded, size: 14),
+                  ],
+                ),
+              );
+            },
           ),
 
           const SizedBox(height: 18),
@@ -1006,144 +1123,253 @@ class _GuestHomeScreenState extends State<GuestHomeScreen> {
   // TAB 3: PROFILE VIEW
   // ══════════════════════════════════════════════════════════════════════════
   Widget _buildProfileView(BuildContext context, bool isEn, bool isDark) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(20.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // User Card
-          NeumorphicCard(
-            padding: const EdgeInsets.all(20),
-            radius: 20,
-            child: Row(
-              children: [
-                CircleAvatar(
-                  radius: 30,
-                  backgroundColor: AppTheme.forestGreen.withValues(alpha: 0.15),
-                  child: const Icon(Icons.person_rounded, size: 36, color: AppTheme.forestGreen),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Guest User',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+    return ListenableBuilder(
+      listenable: UserStateService.instance,
+      builder: (context, _) {
+        final isLoggedIn = UserStateService.instance.isLoggedIn;
+        final userName = UserStateService.instance.userName;
+        final phone = UserStateService.instance.phoneNumber;
+        final vehiclesCount = UserStateService.instance.vehicles.length;
+        final isHost = UserStateService.instance.isProviderRegistered;
+
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // User Profile Card
+              NeumorphicCard(
+                padding: const EdgeInsets.all(20),
+                radius: 20,
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 30,
+                      backgroundColor: AppTheme.forestGreen.withValues(alpha: 0.15),
+                      child: Icon(
+                        isLoggedIn ? Icons.verified_user_rounded : Icons.person_rounded,
+                        size: 34,
+                        color: AppTheme.forestGreen,
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Login to sync vehicles & bookings',
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.outline,
-                          fontSize: 12,
-                        ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            isLoggedIn ? userName : 'Guest User',
+                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            isLoggedIn
+                                ? (phone.isNotEmpty ? phone : 'Verified Account')
+                                : 'Login to sync vehicles & bookings',
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.outline,
+                              fontSize: 12,
+                            ),
+                          ),
+                          if (isLoggedIn) ...[
+                            const SizedBox(height: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: AppTheme.forestGreen.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                'PARKING SEEKER • $vehiclesCount VEHICLE(S)',
+                                style: const TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppTheme.forestGreen,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
-                    ],
-                  ),
+                    ),
+                    if (!isLoggedIn)
+                      NeumorphicButton(
+                        height: 38,
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        onPressed: () => context.push('/login'),
+                        child: const Text('Login', style: TextStyle(fontSize: 12)),
+                      ),
+                  ],
                 ),
-                NeumorphicButton(
-                  height: 38,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  onPressed: () => context.push('/login'),
-                  child: const Text('Login', style: TextStyle(fontSize: 12)),
-                ),
-              ],
-            ),
-          ),
+              ),
 
-          const SizedBox(height: 24),
+              const SizedBox(height: 24),
 
-          Text(
-            'Settings & Preferences',
-            style: Theme.of(context).textTheme.displaySmall?.copyWith(fontSize: 18),
-          ),
-          const SizedBox(height: 12),
+              Text(
+                'Settings & Preferences',
+                style: Theme.of(context).textTheme.displaySmall?.copyWith(fontSize: 18),
+              ),
+              const SizedBox(height: 12),
 
-          // Theme Mode Switch Tile
-          ValueListenableBuilder<ThemeMode>(
-            valueListenable: appThemeMode,
-            builder: (context, mode, _) {
-              final isNight = mode == ThemeMode.dark;
-              return ListTile(
+              // Theme Mode Switch Tile
+              ValueListenableBuilder<ThemeMode>(
+                valueListenable: appThemeMode,
+                builder: (context, mode, _) {
+                  final isNight = mode == ThemeMode.dark;
+                  return ListTile(
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    tileColor: Theme.of(context).colorScheme.surface,
+                    leading: Icon(
+                      isNight ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
+                      color: isNight ? AppTheme.accentGold : AppTheme.forestGreen,
+                    ),
+                    title: const Text('Theme Mode', style: TextStyle(fontWeight: FontWeight.w600)),
+                    subtitle: Text(isNight ? 'Night Mode (Active)' : 'Bright Mode (Active)'),
+                    trailing: Switch(
+                      value: isNight,
+                      activeThumbColor: AppTheme.accentGold,
+                      onChanged: (val) => toggleThemeMode(),
+                    ),
+                  );
+                },
+              ),
+
+              const SizedBox(height: 10),
+
+              // Language Tile
+              ListTile(
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 tileColor: Theme.of(context).colorScheme.surface,
-                leading: Icon(
-                  isNight ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
-                  color: isNight ? AppTheme.accentGold : AppTheme.forestGreen,
+                leading: Icon(Icons.language_rounded, color: isDark ? AppTheme.butter : AppTheme.forestGreen),
+                title: const Text('App Language', style: TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: Text(
+                  appLocale.value.languageCode == 'mr'
+                      ? 'मराठी (Marathi)'
+                      : (appLocale.value.languageCode == 'hi' ? 'हिंदी (Hindi)' : 'English'),
                 ),
-                title: const Text('Theme Mode', style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: Text(isNight ? 'Night Mode (Active)' : 'Bright Mode (Active)'),
-                trailing: Switch(
-                  value: isNight,
-                  activeThumbColor: AppTheme.accentGold,
-                  onChanged: (val) => toggleThemeMode(),
-                ),
-              );
-            },
-          ),
-
-          const SizedBox(height: 10),
-
-          // Language Tile
-          ListTile(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-            tileColor: Theme.of(context).colorScheme.surface,
-            leading: Icon(Icons.language_rounded, color: isDark ? AppTheme.butter : AppTheme.forestGreen),
-            title: const Text('App Language', style: TextStyle(fontWeight: FontWeight.w600)),
-            subtitle: Text(
-              appLocale.value.languageCode == 'mr'
-                  ? 'मराठी (Marathi)'
-                  : (appLocale.value.languageCode == 'hi' ? 'हिंदी (Hindi)' : 'English'),
-            ),
-            trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14),
-            onTap: () => _showLanguageModal(context),
-          ),
-
-          const SizedBox(height: 10),
-
-          // My Vehicles Tile
-          ListTile(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-            tileColor: Theme.of(context).colorScheme.surface,
-            leading: Icon(Icons.directions_car_rounded, color: isDark ? AppTheme.accentGold : AppTheme.forestGreen),
-            title: const Text('My Vehicles', style: TextStyle(fontWeight: FontWeight.w600)),
-            subtitle: const Text('Register vehicle dimensions for bay fitting'),
-            trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14),
-            onTap: () => context.push('/add-vehicle'),
-          ),
-
-          const SizedBox(height: 24),
-
-          Text(
-            'Partner with ParkSync',
-            style: Theme.of(context).textTheme.displaySmall?.copyWith(fontSize: 18),
-          ),
-          const SizedBox(height: 12),
-
-          // Host Onboarding Tile
-          ListTile(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-            tileColor: Theme.of(context).colorScheme.surface,
-            leading: const Icon(Icons.storefront_rounded, color: AppTheme.success),
-            title: const Text('Become a Parking Host', style: TextStyle(fontWeight: FontWeight.w600)),
-            subtitle: const Text('List driveways, lots, or commercial bays'),
-            trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14),
-            onTap: () => context.push('/provider-onboarding'),
-          ),
-
-          const SizedBox(height: 24),
-          Center(
-            child: Text(
-              'ParkSync India • v1.0.0 (Enterprise Build)',
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.outline,
-                fontSize: 12,
+                trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14),
+                onTap: () => _showLanguageModal(context),
               ),
-            ),
+
+              const SizedBox(height: 10),
+
+              // My Vehicles Tile
+              ListTile(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                tileColor: Theme.of(context).colorScheme.surface,
+                leading: Icon(Icons.directions_car_rounded, color: isDark ? AppTheme.accentGold : AppTheme.forestGreen),
+                title: const Text('My Vehicles', style: TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: Text(
+                  vehiclesCount > 0 ? '$vehiclesCount vehicle(s) saved' : 'Register vehicle dimensions for bay fitting',
+                ),
+                trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14),
+                onTap: () => context.push('/add-vehicle'),
+              ),
+
+              const SizedBox(height: 24),
+
+              Text(
+                'Help & Legal',
+                style: Theme.of(context).textTheme.displaySmall?.copyWith(fontSize: 18),
+              ),
+              const SizedBox(height: 12),
+
+              // Driver Guide Manual Tile
+              ListTile(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                tileColor: Theme.of(context).colorScheme.surface,
+                leading: const Icon(Icons.menu_book_rounded, color: AppTheme.forestGreen),
+                title: const Text('ParkSync User Guide & Manual', style: TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: const Text('Driver & host walkthrough, search, & reservations'),
+                trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14),
+                onTap: () => context.push('/user-guide', extra: 0),
+              ),
+
+              const SizedBox(height: 10),
+
+              // Privacy Policy Tile
+              ListTile(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                tileColor: Theme.of(context).colorScheme.surface,
+                leading: const Icon(Icons.policy_rounded, color: AppTheme.forestGreen),
+                title: const Text('Privacy Policy & Terms of Service', style: TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: const Text('DPDP Act 2023 compliance & reservation terms'),
+                trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14),
+                onTap: () => context.push('/privacy-policy', extra: 0),
+              ),
+
+              const SizedBox(height: 24),
+
+              Text(
+                'Partner with ParkSync',
+                style: Theme.of(context).textTheme.displaySmall?.copyWith(fontSize: 18),
+              ),
+              const SizedBox(height: 12),
+
+              // Host Onboarding / Switch Tile
+              ListTile(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                tileColor: Theme.of(context).colorScheme.surface,
+                leading: const Icon(Icons.storefront_rounded, color: AppTheme.success),
+                title: Text(
+                  isHost ? 'Switch to Host Dashboard' : 'Become a Parking Host',
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+                subtitle: Text(
+                  isHost ? 'Manage listings, bookings & view earnings' : 'List driveways, lots, or commercial bays',
+                ),
+                trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14),
+                onTap: () async {
+                  if (isHost) {
+                    await UserStateService.instance.switchRole(UserRole.provider);
+                    if (context.mounted) {
+                      context.go('/provider-home');
+                    }
+                  } else {
+                    context.push('/provider-onboarding');
+                  }
+                },
+              ),
+
+              if (isLoggedIn) ...[
+                const SizedBox(height: 10),
+                ListTile(
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  tileColor: Theme.of(context).colorScheme.surface,
+                  leading: const Icon(Icons.logout_rounded, color: AppTheme.error),
+                  title: const Text(
+                    'Log Out',
+                    style: TextStyle(fontWeight: FontWeight.w600, color: AppTheme.error),
+                  ),
+                  subtitle: const Text('Sign out of your ParkSync seeker account'),
+                  onTap: () async {
+                    await UserStateService.instance.logout();
+                    if (context.mounted) {
+                      SweetPopup.show(
+                        context,
+                        title: 'Logged Out',
+                        message: 'You have been safely signed out.',
+                        icon: Icons.check_circle_rounded,
+                      );
+                    }
+                  },
+                ),
+              ],
+
+              const SizedBox(height: 24),
+              Center(
+                child: Text(
+                  'ParkSync India • v1.0.0 (Enterprise Build)',
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.outline,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
