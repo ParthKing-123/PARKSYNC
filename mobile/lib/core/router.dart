@@ -82,16 +82,22 @@ final appRouter = GoRouter(
       pageBuilder: (context, state) {
         String phone = '';
         String role = 'seeker';
+        String? verificationId;
         if (state.extra is Map<String, dynamic>) {
           final m = state.extra as Map<String, dynamic>;
           phone = m['phone']?.toString() ?? '';
           role = m['role']?.toString() ?? 'seeker';
+          verificationId = m['verificationId']?.toString();
         } else if (state.extra is String) {
           phone = state.extra as String;
         }
         return _buildPage(
           state: state,
-          child: VerifyOtpScreen(phoneNumber: phone, role: role),
+          child: VerifyOtpScreen(
+            phoneNumber: phone,
+            role: role,
+            verificationId: verificationId,
+          ),
         );
       },
     ),

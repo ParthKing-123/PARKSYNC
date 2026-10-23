@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/api_client.dart';
 import '../../../../shared/theme/app_theme.dart';
 import '../../../../shared/widgets/car_loading_indicator.dart';
 import '../../../../shared/widgets/animated_floating_background.dart';
@@ -62,9 +63,31 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     // Standard E.164 phone format
     final fullNumber = '${_selectedCountry.dialCode}$rawNumber';
     final role = _selectedTabIndex == 0 ? 'seeker' : 'provider';
+    String? verificationId;
 
-    // Simulate quick authentication handshake
-    await Future.delayed(const Duration(milliseconds: 500));
+    try {
+      final response = await ApiClient().dio.post('/auth/send-otp', data: {
+        'phone': fullNumber,
+        'role': role,
+      });
+
+      if (response.data != null && response.data['verificationId'] != null) {
+        verificationId = response.data['verificationId'].toString();
+      }
+
+      final msg = response.data?['message']?.toString() ?? 'OTP sent to $fullNumber';
+      if (mounted) {
+        SweetPopup.show(
+          context,
+          title: 'Code Sent!',
+          message: msg,
+          icon: Icons.sms_rounded,
+          iconColor: AppTheme.success,
+        );
+      }
+    } catch (e) {
+      debugPrint('[Auth] Backend unreachable, using offline dev mode: $e');
+    }
 
     if (mounted) {
       setState(() => _isLoading = false);
@@ -73,6 +96,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
         extra: {
           'phone': fullNumber,
           'role': role,
+          'verificationId': verificationId,
         },
       );
     }

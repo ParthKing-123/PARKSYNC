@@ -15,11 +15,13 @@ import 'package:parksync/l10n/app_localizations.dart';
 class VerifyOtpScreen extends StatefulWidget {
   final String phoneNumber;
   final String role; // 'seeker' or 'provider'
+  final String? verificationId;
 
   const VerifyOtpScreen({
     super.key,
     required this.phoneNumber,
     this.role = 'seeker',
+    this.verificationId,
   });
 
   @override
@@ -29,11 +31,50 @@ class VerifyOtpScreen extends StatefulWidget {
 class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
   final _otpController = TextEditingController();
   bool _isLoading = false;
+  String? _currentVerificationId;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentVerificationId = widget.verificationId;
+  }
 
   @override
   void dispose() {
     _otpController.dispose();
     super.dispose();
+  }
+
+  void _resendCode() async {
+    try {
+      final response = await ApiClient().dio.post('/auth/send-otp', data: {
+        'phone': widget.phoneNumber,
+        'role': widget.role,
+      });
+      if (response.data != null && response.data['verificationId'] != null) {
+        _currentVerificationId = response.data['verificationId'].toString();
+      }
+      final msg = response.data?['message']?.toString() ?? 'A new verification code has been dispatched.';
+      if (mounted) {
+        SweetPopup.show(
+          context,
+          title: 'Code Dispatched',
+          message: msg,
+          icon: Icons.sms_outlined,
+          iconColor: AppTheme.accentGold,
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        SweetPopup.show(
+          context,
+          title: 'Code Resent (Dev)',
+          message: 'Offline dev mode active. Use code 123456.',
+          icon: Icons.sms_outlined,
+          iconColor: AppTheme.accentGold,
+        );
+      }
+    }
   }
 
   void _verify() async {
@@ -53,12 +94,13 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
     final userRole = widget.role == 'provider' ? UserRole.provider : UserRole.seeker;
 
     try {
-      // 1. Attempt production backend verification
+      // 1. Attempt production backend verification via MessageCentral
       try {
         final response = await ApiClient().dio.post('/auth/verify', data: {
           'phone': widget.phoneNumber,
           'otp': code,
           'role': widget.role,
+          'verificationId': _currentVerificationId,
         });
 
         final prefs = await SharedPreferences.getInstance();
@@ -66,6 +108,23 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
           await prefs.setString('jwt_token', response.data['token'].toString());
         }
       } catch (backendError) {
+        if (backendError is DioException && backendError.response != null) {
+          final errorData = backendError.response?.data;
+          final errorMsg = errorData is Map && errorData['error'] != null
+              ? errorData['error'].toString()
+              : 'Invalid verification code.';
+          if (mounted) {
+            setState(() => _isLoading = false);
+            SweetPopup.show(
+              context,
+              title: 'Verification Failed',
+              message: errorMsg,
+              icon: Icons.error_outline_rounded,
+              iconColor: AppTheme.error,
+            );
+          }
+          return;
+        }
         // Fallback to Development Adapter if backend server is not running locally
         debugPrint('Backend auth unreachable, using Development Adapter: $backendError');
       }
@@ -276,15 +335,7 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                     TextButton(
-                      onPressed: () {
-                        SweetPopup.show(
-                          context,
-                          title: 'Code Resent',
-                          message: 'A new 6-digit SMS verification code has been dispatched.',
-                          icon: Icons.sms_outlined,
-                          iconColor: AppTheme.accentGold,
-                        );
-                      },
+                      onPressed: _resendCode,
                       child: Text(
                         'Resend SMS',
                         style: TextStyle(
