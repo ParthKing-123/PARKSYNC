@@ -30,7 +30,7 @@ export const setupProviderProfile = async (req: Request, res: Response): Promise
           documentName: documentName || profile.documentName,
           documentSize: documentSize !== undefined ? parseInt(documentSize) : profile.documentSize,
           documentUrl: documentUrl || profile.documentUrl,
-          verificationStatus: 'VERIFIED'
+          verificationStatus: 'PENDING'
         }
       });
     } else {
@@ -45,7 +45,7 @@ export const setupProviderProfile = async (req: Request, res: Response): Promise
           documentName,
           documentSize: documentSize !== undefined ? parseInt(documentSize) : null,
           documentUrl,
-          verificationStatus: 'VERIFIED'
+          verificationStatus: 'PENDING'
         }
       });
     }

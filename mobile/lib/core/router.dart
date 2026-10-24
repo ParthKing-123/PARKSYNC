@@ -20,6 +20,7 @@ import '../features/bookings/presentation/capture_evidence_screen.dart';
 import '../features/reviews/presentation/add_review_screen.dart';
 import '../features/guide/presentation/user_guide_screen.dart';
 import '../features/legal/presentation/privacy_policy_screen.dart';
+import '../features/admin/presentation/super_admin_screen.dart';
 
 /// Smooth fade and slide page transition for a premium application feel.
 CustomTransitionPage<T> _buildPage<T>({
@@ -229,6 +230,13 @@ final appRouter = GoRouter(
       pageBuilder: (context, state) => _buildPage(
         state: state,
         child: AddReviewScreen(bookingId: state.extra as String? ?? ''),
+      ),
+    ),
+    GoRoute(
+      path: '/super-admin',
+      pageBuilder: (context, state) => _buildPage(
+        state: state,
+        child: const SuperAdminScreen(),
       ),
     ),
   ],

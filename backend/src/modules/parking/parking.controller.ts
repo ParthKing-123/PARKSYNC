@@ -14,7 +14,7 @@ export const createParkingSpace = async (req: Request, res: Response): Promise<v
           userId,
           providerType: 'INDIVIDUAL',
           displayName: req.body.hostName || 'Parking Host',
-          verificationStatus: 'VERIFIED'
+          verificationStatus: 'PENDING'
         }
       });
       // Ensure PROVIDER role
@@ -64,7 +64,7 @@ export const createParkingSpace = async (req: Request, res: Response): Promise<v
         ${lat}, ${lng}, ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326),
         ${spaceType}, ${Boolean(covered)}, ${Boolean(cctv)}, ${Boolean(security)}, 
         ${widthMm}, ${lengthMm}, ${heightClearanceMm}, ${parseFloat(pricePerHour)},
-        ${baysTotal}, ${baysAvail}, 'ACTIVE'::"ListingStatus", 'VERIFIED'::"VerificationStatus",
+        ${baysTotal}, ${baysAvail}, 'PENDING_VERIFICATION'::"ListingStatus", 'PENDING'::"VerificationStatus",
         NOW(), NOW()
       );
     `;

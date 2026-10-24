@@ -1139,6 +1139,33 @@ class _HomeScreenState extends State<HomeScreen> {
 
           const SizedBox(height: 12),
 
+          // Super Admin Console Tile
+          NeumorphicCard(
+            onTap: () => context.push('/super-admin'),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            radius: 16,
+            child: Row(
+              children: [
+                Icon(Icons.admin_panel_settings_rounded, color: primaryColor, size: 22),
+                const SizedBox(width: 14),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Super Admin Developer Console',
+                          style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+                      Text('Review & approve pending facilities, view stats',
+                          style: TextStyle(color: Colors.grey, fontSize: 11)),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.arrow_forward_ios_rounded, size: 14),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 12),
+
           // Logout Tile
           NeumorphicCard(
             onTap: () async {

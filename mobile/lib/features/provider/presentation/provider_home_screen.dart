@@ -592,6 +592,60 @@ class _ProviderListingsView extends StatelessWidget {
                             ),
                           ],
                         ),
+                        if (facility.verificationStatus != VerificationStatus.approved) ...[
+                          const SizedBox(height: 12),
+                          InkWell(
+                            onTap: () => context.push('/super-admin'),
+                            borderRadius: BorderRadius.circular(12),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                              decoration: BoxDecoration(
+                                color: AppTheme.amber.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: AppTheme.amber.withValues(alpha: 0.35),
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.hourglass_top_rounded, size: 18, color: AppTheme.amber),
+                                  const SizedBox(width: 10),
+                                  const Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Listing Under Review',
+                                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppTheme.amber),
+                                        ),
+                                        SizedBox(height: 2),
+                                        Text(
+                                          'Pending platform developer verification. Tap to review in Super Admin Console.',
+                                          style: TextStyle(fontSize: 10, color: Colors.grey),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: AppTheme.amber,
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: const Text(
+                                      'Review',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w800,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
                         const SizedBox(height: 14),
                         Text(
                           facility.facilityName,
@@ -824,6 +878,19 @@ class _ProviderProfileSettingsView extends StatelessWidget {
                   style: Theme.of(context).textTheme.displaySmall?.copyWith(fontSize: 18),
                 ),
                 const SizedBox(height: 12),
+
+                // Super Admin Console Tile
+                ListTile(
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  tileColor: Theme.of(context).colorScheme.surface,
+                  leading: const Icon(Icons.admin_panel_settings_rounded, color: AppTheme.forestGreen),
+                  title: const Text('Super Admin Developer Console', style: TextStyle(fontWeight: FontWeight.w600)),
+                  subtitle: const Text('Review & approve pending facilities, view stats'),
+                  trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14),
+                  onTap: () => context.push('/super-admin'),
+                ),
+
+                const SizedBox(height: 10),
 
                 // Switch Role Tile
                 ListTile(

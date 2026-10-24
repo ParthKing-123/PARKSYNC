@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:dio/dio.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/api_client.dart';
@@ -192,17 +194,117 @@ class _ProviderOnboardingScreenState extends State<ProviderOnboardingScreen> {
 
   void _detectGps() async {
     setState(() => _isLocatingGps = true);
-    await Future.delayed(const Duration(milliseconds: 700));
+
+    double detectedLat = 18.5204;
+    double detectedLng = 73.8567;
+    String detectedCity = _cityController.text.trim().isNotEmpty ? _cityController.text.trim() : 'Pune';
+    String detectedPincode = _pincodeController.text.trim().isNotEmpty ? _pincodeController.text.trim() : '411001';
+    String? detectedRoad;
+
+    try {
+      // 1. Check & Request Device Location Permission
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+
+      if (serviceEnabled && (permission == LocationPermission.whileInUse || permission == LocationPermission.always)) {
+        try {
+          Position pos = await Geolocator.getCurrentPosition(
+            desiredAccuracy: LocationAccuracy.high,
+            timeLimit: const Duration(seconds: 4),
+          );
+          detectedLat = pos.latitude;
+          detectedLng = pos.longitude;
+        } catch (_) {
+          final lastKnown = await Geolocator.getLastKnownPosition();
+          if (lastKnown != null) {
+            detectedLat = lastKnown.latitude;
+            detectedLng = lastKnown.longitude;
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('[GPS] Geolocator reading: $e');
+    }
+
+    // 2. Reverse-geocode coordinates using OpenStreetMap Nominatim API
+    try {
+      final dio = Dio(BaseOptions(
+        connectTimeout: const Duration(seconds: 4),
+        receiveTimeout: const Duration(seconds: 4),
+        headers: {'User-Agent': 'ParkSync-India-Mobile/1.0 (admin@parksync.in)'},
+      ));
+
+      final res = await dio.get(
+        'https://nominatim.openstreetmap.org/reverse',
+        queryParameters: {
+          'format': 'json',
+          'lat': detectedLat,
+          'lon': detectedLng,
+          'zoom': 18,
+          'addressdetails': 1,
+        },
+      );
+
+      if (res.statusCode == 200 && res.data != null && res.data['address'] != null) {
+        final addr = res.data['address'] as Map<String, dynamic>;
+
+        final city = addr['city'] ?? addr['town'] ?? addr['village'] ?? addr['suburb'] ?? addr['state_district'];
+        if (city != null && city.toString().trim().isNotEmpty) {
+          detectedCity = city.toString().trim();
+        }
+
+        final postcode = addr['postcode'];
+        if (postcode != null && postcode.toString().trim().isNotEmpty) {
+          final cleanPin = postcode.toString().replaceAll(RegExp(r'[^0-9]'), '');
+          if (cleanPin.length >= 6) {
+            detectedPincode = cleanPin.substring(0, 6);
+          } else if (cleanPin.isNotEmpty) {
+            detectedPincode = cleanPin;
+          }
+        }
+
+        final road = addr['road'] ?? addr['neighbourhood'] ?? addr['suburb'];
+        if (road != null && road.toString().trim().isNotEmpty) {
+          detectedRoad = road.toString().trim();
+        }
+      }
+    } catch (e) {
+      debugPrint('[ReverseGeocode] Nominatim request fallback: $e');
+      // Smart regional fallback for Indian coordinates
+      if ((detectedLat - 18.52).abs() < 0.6 && (detectedLng - 73.85).abs() < 0.6) {
+        detectedCity = 'Pune';
+        detectedPincode = '411037';
+      } else if ((detectedLat - 19.07).abs() < 0.6 && (detectedLng - 72.87).abs() < 0.6) {
+        detectedCity = 'Mumbai';
+        detectedPincode = '400001';
+      } else if ((detectedLat - 12.97).abs() < 0.6 && (detectedLng - 77.59).abs() < 0.6) {
+        detectedCity = 'Bengaluru';
+        detectedPincode = '560001';
+      } else if ((detectedLat - 28.61).abs() < 0.6 && (detectedLng - 77.20).abs() < 0.6) {
+        detectedCity = 'New Delhi';
+        detectedPincode = '110001';
+      }
+    }
+
     if (mounted) {
       setState(() {
-        _latitude = 18.5204;
-        _longitude = 73.8567;
+        _latitude = detectedLat;
+        _longitude = detectedLng;
+        _cityController.text = detectedCity;
+        _pincodeController.text = detectedPincode;
+        if (_addressController.text.trim().isEmpty && detectedRoad != null) {
+          _addressController.text = detectedRoad;
+        }
         _isLocatingGps = false;
       });
+
       SweetPopup.show(
         context,
-        title: 'GPS Coordinates Captured',
-        message: 'Accurate pin set to Lat: 18.5204, Lng: 73.8567',
+        title: 'Location & Pin Auto-Detected!',
+        message: 'City: $detectedCity | Pincode: $detectedPincode\nPin: Lat ${detectedLat.toStringAsFixed(4)}, Lng ${detectedLng.toStringAsFixed(4)}',
         icon: Icons.my_location_rounded,
         iconColor: AppTheme.success,
       );
@@ -1175,11 +1277,15 @@ class _ProviderOnboardingScreenState extends State<ProviderOnboardingScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Capture Exact Bay GPS Coordinates',
+                    Text('Auto-Detect GPS, City & Pincode',
                         style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13, color: isDark ? AppTheme.butter : AppTheme.forestGreen)),
                     const SizedBox(height: 2),
-                    Text('Lat: $_latitude • Long: $_longitude',
-                        style: TextStyle(fontSize: 11, color: isDark ? const Color(0xFFD6EAE5) : AppTheme.textSecondaryLight)),
+                    Text(
+                      _cityController.text.isNotEmpty && _pincodeController.text.isNotEmpty
+                          ? 'Lat: ${_latitude.toStringAsFixed(4)} • Long: ${_longitude.toStringAsFixed(4)} (${_cityController.text} - ${_pincodeController.text})'
+                          : 'Lat: ${_latitude.toStringAsFixed(4)} • Long: ${_longitude.toStringAsFixed(4)} (Tap to auto-fill)',
+                      style: TextStyle(fontSize: 11, color: isDark ? const Color(0xFFD6EAE5) : AppTheme.textSecondaryLight),
+                    ),
                   ],
                 ),
               ),

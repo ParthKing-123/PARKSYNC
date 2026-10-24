@@ -229,6 +229,58 @@ class ProviderFacility {
         isInstantBooking: map['isInstantBooking'] ?? true,
         verificationStatus: VerificationStatusExtension.fromCode(map['verificationStatus']),
       );
+
+  ProviderFacility copyWith({
+    String? id,
+    String? category,
+    String? businessName,
+    String? contactPerson,
+    String? contactPhone,
+    String? contactEmail,
+    String? facilityName,
+    String? address,
+    String? city,
+    String? pincode,
+    double? latitude,
+    double? longitude,
+    int? totalBays,
+    int? availableBays,
+    String? slotType,
+    String? heightClearance,
+    List<String>? allowedVehicles,
+    List<String>? amenities,
+    double? hourlyRate,
+    String? operatingHours,
+    String? operatingDays,
+    bool? isInstantBooking,
+    VerificationStatus? verificationStatus,
+  }) {
+    return ProviderFacility(
+      id: id ?? this.id,
+      category: category ?? this.category,
+      businessName: businessName ?? this.businessName,
+      contactPerson: contactPerson ?? this.contactPerson,
+      contactPhone: contactPhone ?? this.contactPhone,
+      contactEmail: contactEmail ?? this.contactEmail,
+      facilityName: facilityName ?? this.facilityName,
+      address: address ?? this.address,
+      city: city ?? this.city,
+      pincode: pincode ?? this.pincode,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
+      totalBays: totalBays ?? this.totalBays,
+      availableBays: availableBays ?? this.availableBays,
+      slotType: slotType ?? this.slotType,
+      heightClearance: heightClearance ?? this.heightClearance,
+      allowedVehicles: allowedVehicles ?? this.allowedVehicles,
+      amenities: amenities ?? this.amenities,
+      hourlyRate: hourlyRate ?? this.hourlyRate,
+      operatingHours: operatingHours ?? this.operatingHours,
+      operatingDays: operatingDays ?? this.operatingDays,
+      isInstantBooking: isInstantBooking ?? this.isInstantBooking,
+      verificationStatus: verificationStatus ?? this.verificationStatus,
+    );
+  }
 }
 
 /// Central State and Authentication Service for ParkSync
@@ -379,6 +431,16 @@ class UserStateService extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('provider_facility_data', jsonEncode(facility.toJson()));
     notifyListeners();
+  }
+
+  /// Update verification status of current facility (e.g., when approved by Super Admin)
+  Future<void> updateFacilityVerificationStatus(VerificationStatus status) async {
+    if (_providerFacility != null) {
+      _providerFacility = _providerFacility!.copyWith(verificationStatus: status);
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('provider_facility_data', jsonEncode(_providerFacility!.toJson()));
+      notifyListeners();
+    }
   }
 
   /// Log in directly using phone/username/email + password (0 OTPs needed)
