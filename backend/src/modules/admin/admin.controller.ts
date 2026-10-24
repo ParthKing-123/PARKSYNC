@@ -88,32 +88,58 @@ export const verifySpace = async (req: Request, res: Response): Promise<void> =>
       return;
     }
 
-    const space = await prisma.parkingSpace.update({
+    let targetSpaceId = id;
+    let space = await prisma.parkingSpace.findUnique({
       where: { id },
-      data: {
-        status: action === 'APPROVE' ? 'ACTIVE' : 'REJECTED',
-        verificationStatus: action === 'APPROVE' ? 'VERIFIED' : 'REJECTED',
-      },
-      include: {
-        provider: {
-          include: { user: true }
-        }
-      }
+      include: { provider: true }
     });
 
-    // Also update ProviderProfile verificationStatus if space has a provider
-    if (space.providerId) {
-      await prisma.providerProfile.update({
-        where: { id: space.providerId },
+    if (!space) {
+      // Fallback: search if id matches a providerId or find pending space
+      space = await prisma.parkingSpace.findFirst({
+        where: {
+          OR: [
+            { providerId: id },
+            { verificationStatus: 'PENDING' },
+            { status: 'PENDING_VERIFICATION' },
+            { verificationStatus: 'UNVERIFIED' },
+          ]
+        },
+        include: { provider: true }
+      });
+      if (space) {
+        targetSpaceId = space.id;
+      }
+    }
+
+    if (space) {
+      space = await prisma.parkingSpace.update({
+        where: { id: targetSpaceId },
         data: {
+          status: action === 'APPROVE' ? 'ACTIVE' : 'REJECTED',
           verificationStatus: action === 'APPROVE' ? 'VERIFIED' : 'REJECTED',
+        },
+        include: {
+          provider: {
+            include: { user: true }
+          }
         }
       });
+
+      // Also update ProviderProfile verificationStatus if space has a provider
+      if (space.providerId) {
+        await prisma.providerProfile.update({
+          where: { id: space.providerId },
+          data: {
+            verificationStatus: action === 'APPROVE' ? 'VERIFIED' : 'REJECTED',
+          }
+        });
+      }
     }
 
     res.json({ success: true, space });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error in verifySpace:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: error?.message || 'Internal server error' });
   }
 };

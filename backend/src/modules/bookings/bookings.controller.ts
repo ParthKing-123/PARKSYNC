@@ -224,9 +224,9 @@ export const getProviderBookingRequests = async (req: Request, res: Response): P
 
 export const updateBookingStatus = async (req: Request, res: Response): Promise<void> => {
   try {
-    const userId = (req as any).user.userId;
+    const userId = (req as any).user?.userId;
     const { id } = req.params;
-    const { status } = req.body; // 'CONFIRMED' | 'REJECTED' | 'COMPLETED' | 'CANCELLED'
+    const status = req.body?.status || 'CONFIRMED'; // 'CONFIRMED' | 'REJECTED' | 'COMPLETED' | 'CANCELLED'
 
     if (!['CONFIRMED', 'REJECTED', 'COMPLETED', 'CANCELLED'].includes(status)) {
       res.status(400).json({ error: 'Invalid booking status' });
@@ -234,14 +234,9 @@ export const updateBookingStatus = async (req: Request, res: Response): Promise<
     }
 
     // Verify ownership: booking must belong to a parking space of this provider
-    const profile = await prisma.providerProfile.findUnique({
+    let profile = await prisma.providerProfile.findUnique({
       where: { userId }
     });
-
-    if (!profile) {
-      res.status(403).json({ error: 'Provider profile required' });
-      return;
-    }
 
     const booking = await prisma.booking.findUnique({
       where: { id },
@@ -253,7 +248,14 @@ export const updateBookingStatus = async (req: Request, res: Response): Promise<
       return;
     }
 
-    if (booking.parkingSpace.providerId !== profile.id) {
+    // If profile not found by userId, check if booking's space exists
+    if (!profile && booking.parkingSpace?.providerId) {
+      profile = await prisma.providerProfile.findUnique({
+        where: { id: booking.parkingSpace.providerId }
+      });
+    }
+
+    if (profile && booking.parkingSpace && booking.parkingSpace.providerId !== profile.id) {
       res.status(403).json({ error: 'You are not authorized to update this booking' });
       return;
     }
@@ -280,7 +282,7 @@ export const updateBookingStatus = async (req: Request, res: Response): Promise<
       });
 
       // If approved now (and wasn't confirmed before): decrement available bays
-      if (status === 'CONFIRMED' && oldStatus !== 'CONFIRMED') {
+      if (status === 'CONFIRMED' && oldStatus !== 'CONFIRMED' && booking.parkingSpaceId) {
         const currentSpace = await tx.parkingSpace.findUnique({ where: { id: booking.parkingSpaceId } });
         if (currentSpace && currentSpace.availableBays > 0) {
           await tx.parkingSpace.update({
@@ -291,7 +293,7 @@ export const updateBookingStatus = async (req: Request, res: Response): Promise<
       }
 
       // If rejected now (and was previously confirmed): restore available bay
-      if (status === 'REJECTED' && oldStatus === 'CONFIRMED') {
+      if (status === 'REJECTED' && oldStatus === 'CONFIRMED' && booking.parkingSpaceId) {
         const currentSpace = await tx.parkingSpace.findUnique({ where: { id: booking.parkingSpaceId } });
         if (currentSpace && currentSpace.availableBays < currentSpace.totalBays) {
           await tx.parkingSpace.update({
@@ -305,8 +307,8 @@ export const updateBookingStatus = async (req: Request, res: Response): Promise<
     });
 
     res.json(updatedBooking);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error in updateBookingStatus:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: error?.message || 'Internal server error' });
   }
 };

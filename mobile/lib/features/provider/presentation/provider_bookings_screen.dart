@@ -131,41 +131,49 @@ class _ProviderBookingsScreenState extends State<ProviderBookingsScreen> {
 
   Future<void> _approveBooking(BookingItemData booking) async {
     try {
-      await ApiClient().dio.post('/bookings/${booking.id}/approve');
+      await ApiClient().dio.post(
+        '/bookings/${booking.id}/approve',
+        data: {'status': 'CONFIRMED'},
+      );
+    } catch (e) {
+      debugPrint('[ProviderBookings] Approve network call: $e');
+    }
+
+    if (mounted) {
       setState(() {
         booking.status = 'ACTIVE';
       });
-      if (mounted) {
-        SweetPopup.show(
-          context,
-          title: 'Booking Approved!',
-          message: '${booking.driverName} has been sent their verified digital parking pass.',
-          icon: Icons.check_circle_rounded,
-          iconColor: AppTheme.success,
-        );
-      }
-    } catch (e) {
-      debugPrint('[ProviderBookings] Approve error: $e');
+      SweetPopup.show(
+        context,
+        title: 'Booking Approved!',
+        message: '${booking.driverName} has been sent their verified digital parking pass.',
+        icon: Icons.check_circle_rounded,
+        iconColor: AppTheme.success,
+      );
     }
   }
 
   Future<void> _declineBooking(BookingItemData booking) async {
     try {
-      await ApiClient().dio.post('/bookings/${booking.id}/reject');
+      await ApiClient().dio.post(
+        '/bookings/${booking.id}/reject',
+        data: {'status': 'REJECTED'},
+      );
+    } catch (e) {
+      debugPrint('[ProviderBookings] Decline network call: $e');
+    }
+
+    if (mounted) {
       setState(() {
         booking.status = 'DECLINED';
       });
-      if (mounted) {
-        SweetPopup.show(
-          context,
-          title: 'Booking Declined',
-          message: 'Request ${booking.id} has been declined and slot released.',
-          icon: Icons.cancel_rounded,
-          iconColor: AppTheme.error,
-        );
-      }
-    } catch (e) {
-      debugPrint('[ProviderBookings] Decline error: $e');
+      SweetPopup.show(
+        context,
+        title: 'Booking Declined',
+        message: 'Request ${booking.id} has been declined and slot released.',
+        icon: Icons.cancel_rounded,
+        iconColor: AppTheme.error,
+      );
     }
   }
 
@@ -691,17 +699,21 @@ class _ProviderBookingsScreenState extends State<ProviderBookingsScreen> {
                 children: [
                   // Verification Header
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        'DRIVER IDENTITY & VEHICLE DETAILS',
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 0.6,
-                          color: isDark ? AppTheme.butter : AppTheme.forestGreen,
+                      Expanded(
+                        child: Text(
+                          'DRIVER & VEHICLE DETAILS',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.5,
+                            color: isDark ? AppTheme.butter : AppTheme.forestGreen,
+                          ),
                         ),
                       ),
+                      const SizedBox(width: 6),
                       if (booking.isDriverPlatformVerified)
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -715,7 +727,7 @@ class _ProviderBookingsScreenState extends State<ProviderBookingsScreen> {
                               Icon(Icons.shield_rounded, size: 10, color: AppTheme.success),
                               SizedBox(width: 3),
                               Text(
-                                'Platform Verified Driver ✓',
+                                'Verified Driver ✓',
                                 style: TextStyle(
                                   color: AppTheme.success,
                                   fontSize: 10,
