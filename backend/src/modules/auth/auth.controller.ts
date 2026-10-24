@@ -157,7 +157,14 @@ export const loginWithPassword = async (req: Request, res: Response): Promise<vo
           { name: rawIdentifier },
         ],
       },
-      include: { roles: true },
+      include: {
+        roles: true,
+        providerProfile: {
+          include: {
+            parkingSpaces: true,
+          },
+        },
+      },
     });
 
     if (!user) {
@@ -207,6 +214,7 @@ export const loginWithPassword = async (req: Request, res: Response): Promise<vo
         email: user.email,
         roles: user.roles?.map((r: any) => r.role) || [targetRole],
       },
+      providerProfile: user.providerProfile || null,
       token,
     });
   } catch (error: any) {

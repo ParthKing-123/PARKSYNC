@@ -74,7 +74,7 @@ export const getProviderDashboard = async (req: Request, res: Response): Promise
 
     const profile = await prisma.providerProfile.findUnique({
       where: { userId },
-      include: { parkingSpaces: true }
+      include: { parkingSpaces: true, user: true }
     });
 
     if (!profile) {

@@ -361,6 +361,11 @@ class UserStateService extends ChangeNotifier {
 
       _initialized = true;
       notifyListeners();
+
+      // If logged in as provider, sync from backend in case local cache was cleared
+      if (_isLoggedIn && _activeRole == UserRole.provider) {
+        syncProviderProfileFromBackend();
+      }
     } catch (_) {
       _initialized = true;
     }
@@ -464,10 +469,16 @@ class UserStateService extends ChangeNotifier {
       if (response.data != null && response.data['success'] == true) {
         final userData = response.data['user'];
         final token = response.data['token']?.toString();
+        final providerProfile = response.data['providerProfile'];
 
         final phone = userData?['phone']?.toString() ?? cleanIdentifier;
         final name = userData?['name']?.toString() ?? '';
         final email = userData?['email']?.toString() ?? '';
+
+        final prefs = await SharedPreferences.getInstance();
+        if (token != null) {
+          await prefs.setString('jwt_token', token);
+        }
 
         await login(
           phone: phone,
@@ -476,12 +487,17 @@ class UserStateService extends ChangeNotifier {
           email: email.isNotEmpty ? email : null,
         );
 
-        final prefs = await SharedPreferences.getInstance();
-        if (token != null) {
-          await prefs.setString('jwt_token', token);
-        }
         await prefs.setString('user_pwd_${_sanitizePhone(phone)}', cleanPwd);
         await prefs.setBool('user_has_password', true);
+
+        // Auto-restore provider facility from backend if registered
+        if (role == UserRole.provider) {
+          if (providerProfile != null && providerProfile is Map<String, dynamic>) {
+            _restoreFacilityFromBackendData(providerProfile, phone: phone, name: name, email: email);
+          } else {
+            await syncProviderProfileFromBackend();
+          }
+        }
 
         return {'success': true, 'user': userData};
       }
@@ -530,6 +546,73 @@ class UserStateService extends ChangeNotifier {
 
   static String _sanitizePhone(String phone) {
     return phone.replaceAll(RegExp(r'[^0-9]'), '');
+  }
+
+  /// Sync provider profile and listed spaces from backend
+  Future<void> syncProviderProfileFromBackend() async {
+    try {
+      final res = await ApiClient().dio.get('/providers/dashboard');
+      if (res.data != null && res.data['profile'] != null) {
+        final profile = res.data['profile'] as Map<String, dynamic>;
+        final user = profile['user'] as Map<String, dynamic>?;
+        final phone = user?['phone']?.toString() ?? _phoneNumber;
+        final name = user?['name']?.toString() ?? _userName;
+        final email = user?['email']?.toString() ?? _userEmail;
+        _restoreFacilityFromBackendData(profile, phone: phone, name: name, email: email);
+      }
+    } catch (e) {
+      debugPrint('[UserState] syncProviderProfileFromBackend error: $e');
+    }
+  }
+
+  void _restoreFacilityFromBackendData(
+    Map<String, dynamic> profileData, {
+    required String phone,
+    String? name,
+    String? email,
+  }) {
+    try {
+      final spaces = profileData['parkingSpaces'] as List<dynamic>?;
+      final space = (spaces != null && spaces.isNotEmpty) ? spaces.first as Map<String, dynamic> : null;
+
+      final displayName = profileData['displayName']?.toString() ?? (name?.isNotEmpty == true ? name! : 'My Parking Bay');
+      final category = profileData['providerType']?.toString() ?? 'INDIVIDUAL';
+      final vStatusStr = space != null ? space['verificationStatus']?.toString() : profileData['verificationStatus']?.toString();
+
+      final facility = ProviderFacility(
+        id: space?['id']?.toString() ?? profileData['id']?.toString() ?? 'fac_${DateTime.now().millisecondsSinceEpoch}',
+        category: category,
+        businessName: displayName,
+        contactPerson: name?.isNotEmpty == true ? name! : displayName,
+        contactPhone: phone,
+        contactEmail: (email != null && email.isNotEmpty) ? email : 'host@parksync.in',
+        facilityName: space?['title']?.toString() ?? '$displayName Parking',
+        address: space?['address']?.toString() ?? 'Main Street',
+        city: space?['city']?.toString() ?? 'Pune',
+        pincode: space?['pincode']?.toString() ?? '411001',
+        latitude: (space?['latitude'] as num?)?.toDouble() ?? 18.5204,
+        longitude: (space?['longitude'] as num?)?.toDouble() ?? 73.8567,
+        totalBays: space?['totalBays'] ?? 4,
+        availableBays: space?['availableBays'] ?? 4,
+        slotType: space?['spaceType']?.toString() ?? 'Covered',
+        heightClearance: '2.4 m',
+        allowedVehicles: const ['Hatchback', 'Sedan', 'SUV'],
+        amenities: [
+          if (space?['cctv'] == true) 'CCTV 24/7',
+          if (space?['security'] == true) 'Security Guard',
+          if (space?['covered'] == true) 'Covered',
+        ],
+        hourlyRate: (space?['pricePerHour'] as num?)?.toDouble() ?? 40.0,
+        operatingHours: '24 Hours',
+        operatingDays: 'All Days',
+        isInstantBooking: true,
+        verificationStatus: VerificationStatusExtension.fromCode(vStatusStr),
+      );
+
+      saveProviderFacility(facility);
+    } catch (e) {
+      debugPrint('[UserState] Error restoring facility from backend: $e');
+    }
   }
 
   /// Log out

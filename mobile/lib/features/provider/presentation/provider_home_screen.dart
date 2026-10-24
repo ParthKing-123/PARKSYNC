@@ -541,6 +541,14 @@ class _ProviderListingsView extends StatelessWidget {
                             onPressed: () => context.push('/provider-onboarding'),
                             child: const Text('Complete Provider Onboarding'),
                           ),
+                          const SizedBox(height: 10),
+                          TextButton.icon(
+                            onPressed: () async {
+                              await UserStateService.instance.syncProviderProfileFromBackend();
+                            },
+                            icon: const Icon(Icons.cloud_sync_rounded, size: 18),
+                            label: const Text('Sync Existing Facility from Cloud'),
+                          ),
                         ],
                       ),
                     ),
